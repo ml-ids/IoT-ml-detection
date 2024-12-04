@@ -53,29 +53,29 @@ for container in f1_plot.containers:
     )
 for ax in axes:
     ax.legend(loc='lower left', ncols=3)
-    ax.grid(axis='y', linestyle='--', alpha=0.8)
+    ax.grid(axis='y', linestyle='--', alpha=0.2)
 
 plt.tight_layout()
 plt.show()
 
 
-# Pivot data as heatmap?
+# or as as heatmap?
 import seaborn as sns
 pivot_data = results_df.pivot(index="Model", columns="Balance")
 fig, axes = plt.subplots(1, 3, figsize=(18, 6))
 
 
-sns.heatmap(pivot_data["Accuracy"], annot=True, fmt=".4f", cmap="Blues", ax=axes[0])
+sns.heatmap(pivot_data["Accuracy"], annot=True, fmt=".6f", cmap="Blues", ax=axes[0])
 axes[0].set_title('Accuracy Heatmap')
 axes[0].set_xlabel('SMOTE')
 axes[0].set_ylabel('Model')
 
-sns.heatmap(pivot_data["Precision"], annot=True, fmt=".4f", cmap="Greens", ax=axes[1])
+sns.heatmap(pivot_data["Precision"], annot=True, fmt=".6f", cmap="Greens", ax=axes[1])
 axes[1].set_title('Precision Heatmap')
 axes[1].set_xlabel('SMOTE')
 axes[1].set_ylabel('Model')
 
-sns.heatmap(pivot_data["F1-Score"], annot=True, fmt=".4f", cmap="Reds", ax=axes[2])
+sns.heatmap(pivot_data["F1-Score"], annot=True, fmt=".6f", cmap="Reds", ax=axes[2])
 axes[2].set_title('F1-Score Heatmap')
 axes[2].set_xlabel('SMOTE')
 axes[2].set_ylabel('Model')
