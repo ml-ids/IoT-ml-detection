@@ -8,7 +8,6 @@ from sklearn.neighbors import KNeighborsClassifier
 from imblearn.over_sampling import SMOTE
 from sklearn.preprocessing import StandardScaler
 import xgboost as xgb
-
 import pandas as pd
 
 def calculate_metrics(y_test, y_pred, model_name, smote_applied, results):
@@ -20,7 +19,7 @@ def calculate_metrics(y_test, y_pred, model_name, smote_applied, results):
     print(f"{model_name} ({'With SMOTE' if smote_applied else 'Without SMOTE'}): "
           f"Accuracy = {accuracy:.8f}, Precision = {precision:.8f}, F1-Score = {f1:.8f}") # print with 8 digit precision
 
-data_cleaned = pd.read_csv('features_cleaned.csv')
+data_cleaned = pd.read_csv('features-clean.csv')
 data_cleaned = pd.DataFrame(data_cleaned)
 
 RANDOM_STATE = 42
@@ -40,9 +39,8 @@ models = [ # models to be used
     ("KNN", KNeighborsClassifier()),
     ("MLP Classifier", MLPClassifier(hidden_layer_sizes=(100, 50), max_iter=MLP_MAX_ITER)),
     ("Perceptron", Perceptron(max_iter=PR_MAX_ITER))
-
+    ("XGBoost", xgb.XGBClassifier())
  ]
-
 
 for i in range(2): # train models without and then with SMOTE applied
     if (i == 1):
@@ -78,4 +76,4 @@ for i in range(2):
 # Convert results to DataFrame for easier plotting
 results_df = pd.DataFrame(results, columns=["Model", "Balance", "Accuracy", "Precision", "F1-Score"])
 
-results_df.to_csv('learn-compare_new.csv', index=False)
+results_df.to_csv('learn-compare.csv', index=False)
