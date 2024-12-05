@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import LabelEncoder
 
-data = pd.read_csv('train_test_network.csv')
+data = pd.read_csv('csvs/train_test_network.csv')
 data = pd.DataFrame(data)
 
 columns_to_drop = ['type', 'dst_ip_bytes', 'missed_bytes', 'duration', 'dst_pkts', 
@@ -41,4 +41,4 @@ plt.xlabel('Class')
 plt.ylabel('Frequency')
 plt.show()
 
-data_cleaned.to_csv('features-clean.csv', index=False)
+data_cleaned.to_csv('csvs/features-clean.csv', index=False)
