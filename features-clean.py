@@ -16,7 +16,8 @@ def getPreprocessor(features):
     preprocessor = ColumnTransformer(
         transformers=[
             ('num', StandardScaler(), numerical_features),
-            ('cat', OneHotEncoder(), categorical_features)        ])
+            ('cat', OneHotEncoder(), categorical_features)        
+        ])
     return preprocessor
 
 # Load the data
