@@ -1,13 +1,13 @@
 # String features
 string_features = [
-    "proto", "service", "conn_state",
+    "proto", "service", "conn_state", "src_ip", "dst_ip",
     "dns_query", "ssl_version", "ssl_cipher", "ssl_subject", "ssl_issuer",
     "http_method", "http_uri", "http_version", "http_orig_mime_types",
     "http_resp_mime_types", "weird_name", "weird_addl", "http_user_agent"
 ]
 # Number features
 int_features = [
-    "src_bytes", "dst_bytes",
+    "src_bytes", "dst_bytes", "dst_port", "src_port",
     "missed_bytes", "src_pkts", "src_ip_bytes", "dst_pkts", "dst_ip_bytes",
     "dns_qclass", "dns_qtype", "dns_rcode", "http_trans_depth",
     "http_request_body_len", "http_response_body_len", "http_status_code"
