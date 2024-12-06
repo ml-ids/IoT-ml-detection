@@ -10,6 +10,40 @@ from sklearn.preprocessing import OneHotEncoder
 # Import the feature types definition
 from featureTypesDef import *
 
+def scaleEncode(x):
+    print("# Scaling numerical features...")
+    numerical_features = int_features + float_features
+    scaler = StandardScaler()
+    x_numerical_scaled = scaler.fit_transform(x[numerical_features])
+    numerical_df = pd.DataFrame(x_numerical_scaled, columns=numerical_features)
+    # Encode categorical features using LabelEncoder
+    print("# Encoding categorical features...")
+    categorical_features = string_features + boolean_features
+    label_encoded_dfs = []
+    for col in categorical_features:
+        encoder = LabelEncoder()
+        x[col] = encoder.fit_transform(x[col])
+        label_encoded_dfs.append(x[col])
+    # Combine scaled numerical and label-encoded categorical features
+    print("# Combining scaled and encoded features...")
+    label_encoded_df = pd.concat(label_encoded_dfs, axis=1)
+    x_prep = pd.concat([numerical_df, label_encoded_df], axis=1)
+    return x_prep
+
+def getVariances(threshold, data):
+    var_threshold = VarianceThreshold(threshold=threshold)  # Set the threshold to 0.3
+    var_threshold.fit(data)
+    variances = var_threshold.variances_
+    # Create a DataFrame for variances
+    variances_df = pd.DataFrame(variances, index=data.columns, columns=["Variance"])
+    # Sort variances in descending order
+    variances_df = variances_df.sort_values(by="Variance", ascending=False)
+    # Print features with variance >= 0.3
+    features_high_variance = variances_df[variances_df['Variance'] >= 0.3]
+    # Print features with variance < 0.3
+    features_low_variance = variances_df[variances_df['Variance'] < 0.3]
+    return variances_df, features_high_variance, features_low_variance
+
 # Load the data
 print('# Loading data...')
 data = pd.read_csv('csvs/train_test_network.csv', 
@@ -40,59 +74,30 @@ print(counts.to_string())
 #                 textcoords='offset points')
 # plt.show()
 
-# Drop columns
-columns_to_drop = ['type']
-# print("# Dropping columns...")
-data_cleaned = data.drop(columns=columns_to_drop, axis=1)
-print(f'# Columns dropped: {columns_to_drop}')
-
 # Fill missing values
 # print("# Filling missing values...")
 for col in int_features:
-    data_cleaned[col] = pd.to_numeric(data_cleaned[col], errors="coerce").fillna(0)
+    data[col] = pd.to_numeric(data[col], errors="coerce").fillna(0)
 for col in float_features:
-    data_cleaned[col] = pd.to_numeric(data_cleaned[col], errors="coerce").fillna(0.0)
+    data[col] = pd.to_numeric(data[col], errors="coerce").fillna(0.0)
 for col in string_features:
-    data_cleaned[col] = data_cleaned[col].fillna("")
+    data[col] = data[col].fillna("")
 for col in boolean_features:
-    data_cleaned[col] = data_cleaned[col].fillna(False)
+    data[col] = data[col].fillna(False)
 print("# Filled missing values in the train dataset.")
 
-x = data_cleaned.drop(columns=['label'], axis=1)
+data_binary = data.drop(columns=['type'], axis=1)
+data_multi = data.drop(columns=['label'], axis=1)
+data_noLabel = data.drop(columns=['label', 'type'], axis=1)
 
 # Scale numerical features
-print("# Scaling numerical features...")
-numerical_features = int_features + float_features
-scaler = StandardScaler()
-x_numerical_scaled = scaler.fit_transform(x[numerical_features])
-numerical_df = pd.DataFrame(x_numerical_scaled, columns=numerical_features)
-# Encode categorical features using LabelEncoder
-print("# Encoding categorical features...")
-categorical_features = string_features + boolean_features
-label_encoded_dfs = []
-for col in categorical_features:
-    encoder = LabelEncoder()
-    x[col] = encoder.fit_transform(x[col])
-    label_encoded_dfs.append(x[col])
-# Combine scaled numerical and label-encoded categorical features
-print("# Combining scaled and encoded features...")
-label_encoded_df = pd.concat(label_encoded_dfs, axis=1)
-x_prep = pd.concat([numerical_df, label_encoded_df], axis=1)
+data_prep = scaleEncode(data)
 
 # Apply VarianceThreshold
-var_threshold = VarianceThreshold(threshold=0.3)  # Set the threshold to 0.3
-var_threshold.fit(x_prep)
-variances = var_threshold.variances_
-# Create a DataFrame for variances
-variances_df = pd.DataFrame(variances, index=x_prep.columns, columns=["Variance"])
-# Sort variances in descending order
-variances_df = variances_df.sort_values(by="Variance", ascending=False)
+print("# Applying VarianceThreshold...")
+variances_df, features_high_variance, features_low_variance = getVariances(0.3, data_prep)
 variances_df.to_csv('csvs/variances.csv')
-# Print features with variance >= 0.3
-features_high_variance = variances_df[variances_df['Variance'] >= 0.3]
 features_high_variance.to_csv('csvs/features_high_variance.csv')
-# Print features with variance < 0.3
-features_low_variance = variances_df[variances_df['Variance'] < 0.3]
 features_low_variance.to_csv('csvs/features_low_variance.csv')
 
 # correlation_matrix = data_cleaned.corr()
