@@ -20,7 +20,11 @@ def calculate_metrics(y_test, y_pred, model_name, method, results):
     print(f"{model_name} (Method {method}): " f"Accuracy = {accuracy:.8f}, Precision = {precision:.8f}, F1-Score = {f1:.8f}")  # print with 8 digit precision
 
 
-data_cleaned = pd.read_csv("csvs/features-clean.csv")
+dataset_path = 'csvs/datasets/'
+fSelection_path = 'csvs/fSelection/'
+modelsComparison_path = 'csvs/modelsComparison/'
+dataset_name = 'binary_1best_features.csv'
+data_cleaned = pd.read_csv(f"{fSelection_path}{dataset_name}")
 data_cleaned = pd.DataFrame(data_cleaned)
 
 RANDOM_STATE = 42
@@ -90,4 +94,4 @@ for i in ["None", "SMOTE"]:
 # Convert results to DataFrame for easier plotting
 results_df = pd.DataFrame(results, columns=["Model", "Method", "Accuracy", "Precision", "F1-Score"])
 
-results_df.to_csv("csvs/learn-compare.csv", index=False)
+results_df.to_csv(f"{modelsComparison_path}{dataset_name.replace('.csv', '')}_compare.csv", index=False)

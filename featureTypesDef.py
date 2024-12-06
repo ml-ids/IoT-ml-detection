@@ -3,7 +3,7 @@ string_features = [
     "proto", "service", "conn_state", "src_ip", "dst_ip",
     "dns_query", "ssl_version", "ssl_cipher", "ssl_subject", "ssl_issuer",
     "http_method", "http_uri", "http_version", "http_orig_mime_types",
-    "http_resp_mime_types", "weird_name", "weird_addl", "http_user_agent"
+    "http_resp_mime_types", "weird_name", "weird_addl", "http_user_agent", "type"
 ]
 # Number features
 int_features = [
@@ -16,7 +16,7 @@ float_features = ["duration"]
 # Boolean features
 boolean_features = [
     "dns_AA", "dns_RD", "dns_RA", "dns_rejected", "ssl_resumed",
-    "ssl_established", "weird_notice"
+    "ssl_established", "weird_notice", "label"
 ]
 
 toniot_dtype_spec = {}
