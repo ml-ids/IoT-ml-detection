@@ -39,8 +39,8 @@ models = [  # models to be used
     ("Decision Tree", DecisionTreeClassifier()), #https://scikit-learn.org/1.5/modules/generated/sklearn.tree.DecisionTreeClassifier.html
     ("KNN", KNeighborsClassifier()), #https://scikit-learn.org/1.5/modules/generated/sklearn.neighbors.KNeighborsClassifier.html
     ("MLP Classifier", MLPClassifier(hidden_layer_sizes=(100, 50), max_iter=MLP_MAX_ITER)), #https://scikit-learn.org/1.5/modules/generated/sklearn.neural_network.MLPClassifier.html
-    ("Perceptron", Perceptron(max_iter=PR_MAX_ITER)) #https://scikit-learn.org/1.5/modules/generated/sklearn.linear_model.Perceptron.html
-    ("XGBoost", xgb.XGBClassifier()), # https://xgboost.readthedocs.io/en/latest/python/python_api.html
+    ("Perceptron", Perceptron(max_iter=PR_MAX_ITER)), #https://scikit-learn.org/1.5/modules/generated/sklearn.linear_model.Perceptron.html
+    ("XGBoost", xgb.XGBClassifier()) # https://xgboost.readthedocs.io/en/latest/python/python_api.html
 ]
 
 for i in ["None", "SMOTE"]:  # train models without and then with SMOTE applied
