@@ -85,7 +85,8 @@ var_threshold.fit(x_prep)
 variances = var_threshold.variances_
 # Create a DataFrame for variances
 variances_df = pd.DataFrame(variances, index=x_prep.columns, columns=["Variance"])
-# Save all variances to a CSV file
+# Sort variances in descending order
+variances_df = variances_df.sort_values(by="Variance", ascending=False)
 variances_df.to_csv('csvs/variances.csv')
 # Print features with variance >= 0.3
 features_high_variance = variances_df[variances_df['Variance'] >= 0.3]
@@ -93,19 +94,6 @@ features_high_variance.to_csv('csvs/features_high_variance.csv')
 # Print features with variance < 0.3
 features_low_variance = variances_df[variances_df['Variance'] < 0.3]
 features_low_variance.to_csv('csvs/features_low_variance.csv')
-
-# Plot the variances
-plt.figure(figsize=(12, 6))
-sns.barplot(x=variances_df.index, y=variances_df['Variance'])
-plt.xticks(rotation=90)
-plt.title("Feature Variances Before Thresholding")
-plt.xlabel("Features")
-plt.ylabel("Variance")
-# Add numbers on top of the bars
-for i, v in enumerate(variances_df['Variance']):
-    plt.text(i, v + 0.005, f'{v:.3f}', ha='center', va='bottom', fontsize=10)
-plt.tight_layout()
-plt.show()
 
 # correlation_matrix = data_cleaned.corr()
 # plt.figure(figsize=(20, 20))
