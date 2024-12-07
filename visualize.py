@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import json
 
-results_df = pd.read_csv('learn-compare.csv')
+results_df = pd.read_csv('csvs/learn-compare.csv')
 json.dump(results_df.to_dict(), open('learn-compare.json', 'w'))
 results_df = pd.DataFrame(results_df)
 
