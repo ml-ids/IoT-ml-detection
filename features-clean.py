@@ -21,10 +21,10 @@ PR_MAX_ITER = 300
 TEST_SIZE = 0.3
 
 models = [  # models to be used
-    ("Random Forest", RandomForestClassifier()), #https://scikit-learn.org/1.5/modules/generated/sklearn.ensemble.RandomForestClassifier.html
-    ("Decision Tree", DecisionTreeClassifier()), #https://scikit-learn.org/1.5/modules/generated/sklearn.tree.DecisionTreeClassifier.html
+    ("RandomForest", RandomForestClassifier()), #https://scikit-learn.org/1.5/modules/generated/sklearn.ensemble.RandomForestClassifier.html
+    ("DecisionTree", DecisionTreeClassifier()), #https://scikit-learn.org/1.5/modules/generated/sklearn.tree.DecisionTreeClassifier.html
     ("KNN", KNeighborsClassifier()), #https://scikit-learn.org/1.5/modules/generated/sklearn.neighbors.KNeighborsClassifier.html
-    ("MLP Classifier", MLPClassifier(hidden_layer_sizes=(100, 50), max_iter=MLP_MAX_ITER)), #https://scikit-learn.org/1.5/modules/generated/sklearn.neural_network.MLPClassifier.html
+    ("MLPClassifier", MLPClassifier(hidden_layer_sizes=(100, 50), max_iter=MLP_MAX_ITER)), #https://scikit-learn.org/1.5/modules/generated/sklearn.neural_network.MLPClassifier.html
     ("Perceptron", Perceptron(max_iter=PR_MAX_ITER)), #https://scikit-learn.org/1.5/modules/generated/sklearn.linear_model.Perceptron.html
     ("XGBoost", xgb.XGBClassifier()) # https://xgboost.readthedocs.io/en/latest/python/python_api.html
 ]
@@ -74,6 +74,12 @@ def getVariances(threshold, data):
     features_low_variance = variances_df[variances_df['Variance'] < 0.3]
     return variances_df, features_high_variance, features_low_variance
 
+def calculate_metrics(y_test, y_pred):
+    accuracy = accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred, average="weighted")
+    f1 = f1_score(y_test, y_pred, average="weighted")
+    return (accuracy, precision, f1)
+
 def getKBest(k, data, target, targetName):
     # selection
     selector = SelectKBest(score_func=mutual_info_classif, k=k)
@@ -85,11 +91,29 @@ def getKBest(k, data, target, targetName):
 
     return x_kbest_df
 
-def calculate_metrics(y_test, y_pred, model_name):
-    accuracy = accuracy_score(y_test, y_pred)
-    precision = precision_score(y_test, y_pred, average="weighted")
-    f1 = f1_score(y_test, y_pred, average="weighted")
-    return (model_name, accuracy, precision, f1)    
+def process_kbest(data, target, target_name, k, file_path, model):
+    try:
+        x_kbest_df = pd.read_csv(file_path)
+        print(f"# {file_path} already exists. Skipping KBest computation for k={k}.")
+    except FileNotFoundError:
+        print(f"# Applying KBest for {target_name} target with k={k}...")
+        x_kbest_df = getKBest(k, data, target, target_name)
+        x_kbest_df[target_name] = target.values
+        x_kbest_df.to_csv(file_path, index=False)
+    x_kbest_df = x_kbest_df.drop(columns=[target_name], axis=1)
+    x_train, x_test, y_train, y_test = train_test_split(x_kbest_df, target, 
+                                                        test_size=TEST_SIZE, random_state=RANDOM_STATE)
+    print(f"# Training...")
+    model.fit(x_train, y_train)  
+    print(f"# Predicting...")
+    y_pred = model.predict(x_test)
+    accuracy, precision, f1 = calculate_metrics(y_test, y_pred)
+    kbest_features_names = x_kbest_df.columns.tolist()
+    return (k, accuracy, precision, f1, kbest_features_names)
+
+def save_results(results, file_path, columns):
+    results_df = pd.DataFrame(results, columns=columns)
+    results_df.to_csv(file_path, index=False)
 
 # Load the data
 dataset_path = 'csvs/datasets/'
@@ -146,44 +170,20 @@ features_high_variance.to_csv(f'{fSelection_path}features_high_variance.csv')
 features_low_variance.to_csv(f'{fSelection_path}features_low_variance.csv')
 
 # Apply KBest
-results = []
-# for k in range(1, 3 + 1):
+results_binary = []
+results_multi = []
+columns = ["Model", "K", "Accuracy", "Precision", "F1-Score", "Features"]
 for k in range(1, data_noLabel.shape[1] + 1):
-    file_path = f'{fSelection_path}binary_{k}best_features.csv'
-    try:
-        x_binary_kbest_df = pd.read_csv(file_path).drop(columns=['label'])
-        print(f"# {file_path} already exists. Skipping KBest computation for k={k}.")
-        x_train, x_test, y_train, y_test = train_test_split(x_binary_kbest_df, y_binary, test_size=TEST_SIZE, random_state=RANDOM_STATE)
-    except FileNotFoundError:
-        print(f"# Applying KBest for binary target with k={k}...")
-        x_binary_kbest_df = getKBest(k, data_binary, y_binary, 'label')
-        x_train, x_test, y_train, y_test = train_test_split(x_binary_kbest_df, y_binary, test_size=TEST_SIZE, random_state=RANDOM_STATE)
-        # Save the k-best features to a CSV file
-        x_binary_kbest_df['label'] = y_binary.values
-        x_binary_kbest_df.to_csv(file_path, index=False)
-    # train and predict the model
     name, model = models[0]
-    print(f"# Training...")
-    model.fit(x_train, y_train)  
-    print(f"# Predicting...")
-    y_pred = model.predict(x_test)
-    # metrics
-    modelName, accuracy, precision, f1 = calculate_metrics(y_test, y_pred, name)
-    kbest_features_names = x_binary_kbest_df.columns.tolist()
-    results.append((k, modelName, accuracy, precision, f1, kbest_features_names))
-    print(f"{modelName} (k={k}): " f"Accuracy = {accuracy:.8f}, Precision = {precision:.8f}, F1-Score = {f1:.8f}")  # print with 8 digit precision
-    
-    # print(f"# Applying KBest for multi-class target with k={k}...")
-    # x_multi_kbest_df = getKBest(k, data_multi, y_multi, 'type')
-    
-results_df = pd.DataFrame(results, columns=["K", "Model", "Accuracy", "Precision", "F1-Score", "Features"])
-results_df.to_csv(f'{fSelection_path}binary_kbest_{modelName}_results.csv', index=False)
-# results_df = pd.DataFrame(results, columns=["K", "Model", "Accuracy", "Precision", "F1-Score", "Features"])
-# results_df.to_csv(f'{fSelection_path}multi_kbest_{modelName}_results.csv', index=False)
+    binary_file_path = f'{fSelection_path}binary_{k}best_features.csv'
+    multi_file_path = f'{fSelection_path}multi_{k}best_features.csv'
+    results_binary.append((name,) + process_kbest(data_binary, y_binary, 'label', k, binary_file_path, model))
+    results_multi.append(process_kbest(data_multi, y_multi, 'type', k, multi_file_path, model))
+
+save_results(results_binary, f'{fSelection_path}binary_kbest_{name}_results.csv', columns)
+save_results(results_multi, f'{fSelection_path}multi_kbest_{name}_results.csv', columns)
 
 print(f"# Results in {fSelection_path}")
-
-
 
 
 
