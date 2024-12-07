@@ -140,19 +140,22 @@ plt.title("Multiclass Class Distribution")
 plt.xlabel("Type")
 plt.ylabel("Count")
 plt.figtext(0, 0, f"{args.data_set}", fontsize=8)
+plt.ylim(0, type_counts.max() * 1.1)
 plt.subplots_adjust(bottom=0.2)
 for i, count in enumerate(type_counts):
-    plt.text(i, count, str(count), ha="center", va="bottom", fontsize=10, )
-
+    percentage = count / type_counts.sum() * 100
+    plt.text(i, count, f"{count}\n{percentage:.2f}%", ha="center", va="bottom", fontsize=10)
 
 if args.show:
     plt.show()
 else:
     plt.savefig("graphics/multiclass-distribution.png")
 
-plt.figure(figsize=(14, 8))
+print(df['type'].value_counts(normalize=True))    
+
+plt.figure(figsize=(8, 8))
 type_counts = df['label'].value_counts()
-type_counts.index = type_counts.index.map({0: '0 - benign', 1: '1 - attack'})
+type_counts.index = type_counts.index.map({False: '0 - benign', True: '1 - attack'})
 type_counts.plot(kind='bar', color=['#007698'])
 plt.title("Binary Class Distribution")
 plt.xlabel("Type")
@@ -161,13 +164,27 @@ plt.xticks(rotation=0)
 plt.figtext(0, 0, f"{args.data_set}", fontsize=8)
 plt.subplots_adjust(bottom=0.2)
 for i, count in enumerate(type_counts):
-    plt.text(i, count, str(count), ha="center", va="bottom")
+    percentage = count / type_counts.sum() * 100
+    plt.text(i, count, f"{count} ({percentage:.2f}%)", ha="center", va="bottom", fontsize=10)
+
+# or pie chart?
+# plt.figure(figsize=(7, 7))
+# type_counts = df['label'].value_counts()
+# type_counts.index = type_counts.index.map({False: '0 - benign', True: '1 - attack'})
+# type_counts.plot(kind='pie', color=['#007698','#211a51'])
+# plt.title("Binary Class Distribution")
+# plt.figtext(0, 0, f"{args.data_set}", fontsize=8)
+# plt.subplots_adjust(bottom=0.2)
+# plt.pie(type_counts, autopct='%1.1f%% ')
+
 
 if args.show:
     plt.show()
 else:
     plt.savefig("graphics/binary-distribution.png")
 del(plt)
+
+print(df['label'].value_counts(normalize=True))    
 
 
 df.to_csv(os.path.splitext(args.data_set)[0] + "_clean.csv", index=False)
