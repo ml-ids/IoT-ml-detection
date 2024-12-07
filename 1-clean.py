@@ -2,11 +2,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import argparse
 import os
-
-
 """
 This reads the raw CSV data, applies the correct data types, print some stats and saves the cleaned data to a new CSV file plus data type defintions
-
 
 """
 
@@ -19,7 +16,6 @@ args = parser.parse_args()
 
 df = pd.read_csv(args.data_set)
 df = pd.DataFrame(df)
-
 
 # fix the Data types
 # String features
@@ -84,7 +80,7 @@ if args.verbose > 0:
     for column in df.columns:
         print(f"{column}: {df[column].dtype}")
 
-    # Plot the data types of each feature/column
+# Plot the data types of each feature/column
 plt.figure(figsize=(14, 8))
 df.dtypes.value_counts().plot(kind="bar", color="#007698")
 plt.title("Data Types of Features")
@@ -93,37 +89,41 @@ plt.ylabel("Number of Features/Columns")
 for i, count in enumerate(df.dtypes.value_counts()):
     plt.text(i, count, str(count), ha="center", va="bottom")
 plt.figtext(0, 0, f"{args.data_set}", fontsize=10)
+plt.subplots_adjust(bottom=0.2)
 
 if args.show:
     plt.show()
 else:
     plt.savefig("graphics/features-datatypes.png")
 
-# #211a51
 # Plot the number of unique items per feature/column, also drop ip and type for comparision
-unique_counts = df.select_dtypes(include=["object"]).drop(columns=["src_ip", "dst_ip", "type"]).nunique()
 plt.figure(figsize=(14, 8))
+unique_counts = df.select_dtypes(include=["object"]).drop(columns=["src_ip", "dst_ip", "type"]).nunique()
 unique_counts.plot(kind="bar", color="#007698")
 plt.title("Number of Unique Items per Categorical Features")
 plt.xlabel("Feature/Column")
 plt.ylabel("Number of Unique Items")
+plt.figtext(0, 0, f"{args.data_set}", fontsize=10)
+plt.subplots_adjust(bottom=0.2)
+
 for i, count in enumerate(unique_counts):
     plt.text(i, count, str(count), ha="center", va="bottom")
-
-plt.figtext(0, 0, f"{args.data_set}", fontsize=10)
 
 if args.show:
     plt.show()
 else:
     plt.savefig("graphics/features-categorical-unique.png")
 
+
 # same for integer values
-unique_counts = df.select_dtypes(include=["int64"]).nunique()
 plt.figure(figsize=(14, 8))
+unique_counts = df.select_dtypes(include=["int64"]).nunique()
 unique_counts.plot(kind="bar", color="#007698")
 plt.title("Number of Unique Items per Integer Features")
 plt.xlabel("Feature/Column")
 plt.ylabel("Number of Unique Items")
+plt.figtext(0, 0, f"{args.data_set}", fontsize=10)
+plt.subplots_adjust(bottom=0.2)
 for i, count in enumerate(unique_counts):
     plt.text(i, count, str(count), ha="center", va="bottom")
 
@@ -132,8 +132,46 @@ if args.show:
 else:
     plt.savefig("graphics/features-integer-unique.png")
 
+# Print the unique count of the 'type'/'label' field
+plt.figure(figsize=(14, 8))
+type_counts = df['type'].value_counts()
+type_counts.plot(kind='bar', color=['#007698'])
+plt.title("Multiclass Class Distribution")
+plt.xlabel("Type")
+plt.ylabel("Count")
+plt.figtext(0, 0, f"{args.data_set}", fontsize=8)
+plt.subplots_adjust(bottom=0.2)
+for i, count in enumerate(type_counts):
+    plt.text(i, count, str(count), ha="center", va="bottom", fontsize=10, )
+
+
+if args.show:
+    plt.show()
+else:
+    plt.savefig("graphics/multiclass-distribution.png")
+
+plt.figure(figsize=(14, 8))
+type_counts = df['label'].value_counts()
+type_counts.index = type_counts.index.map({0: '0 - benign', 1: '1 - attack'})
+type_counts.plot(kind='bar', color=['#007698'])
+plt.title("Binary Class Distribution")
+plt.xlabel("Type")
+plt.ylabel("Count")
+plt.xticks(rotation=0)
+plt.figtext(0, 0, f"{args.data_set}", fontsize=8)
+plt.subplots_adjust(bottom=0.2)
+for i, count in enumerate(type_counts):
+    plt.text(i, count, str(count), ha="center", va="bottom")
+
+if args.show:
+    plt.show()
+else:
+    plt.savefig("graphics/binary-distribution.png")
+del(plt)
+
+
 df.to_csv(os.path.splitext(args.data_set)[0] + "_clean.csv", index=False)
-df.dtypes.astype(str).to_json(os.path.splitext(args.data_set)[0] + "_datatype.json")
+df.dtypes.astype(str).to_json(os.path.splitext(args.data_set)[0] + "_clean_datatype.json")
 
 # alternative to save as pickle with the data types
-# df.to_pickle(os.path.splitext(args.data_set)[0]+"_clean.pkl")
+df.to_pickle(os.path.splitext(args.data_set)[0]+"_clean.pkl")
