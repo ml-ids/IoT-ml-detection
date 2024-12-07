@@ -8,12 +8,7 @@ from sklearn.feature_selection import (
 )
 from sklearn.metrics import f1_score, precision_score, accuracy_score
 from sklearn.model_selection import train_test_split
-
-# Import the feature types definition
 from utils import *
-
-RANDOM_STATE = 42
-TEST_SIZE = 0.3
 
 
 def scaleEncode(x):

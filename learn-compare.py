@@ -5,13 +5,11 @@ from imblearn.over_sampling import SMOTE
 from sklearn.preprocessing import StandardScaler
 import pandas as pd
 from typing import List, Tuple
-from utils import models, FSELECTION_PATH, MODELS_COMPARISON_PATH
+from utils import models, FSELECTION_PATH, MODELS_COMPARISON_PATH, RANDOM_STATE, TEST_SIZE
 
 # Constants
 DATASET_NAME = "binary_10best_features.csv"
-RANDOM_STATE = 42
 LR_MAX_ITER = 300
-TEST_SIZE = 0.3
 
 
 def apply_smote(X_train: pd.DataFrame, y_train: pd.Series, random_state: int):

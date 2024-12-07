@@ -10,6 +10,8 @@ FSELECTION_PATH = "data/fSelection/"
 MODELS_COMPARISON_PATH = "data/modelsComparison/"
 MLP_MAX_ITER = 500
 PR_MAX_ITER = 300
+RANDOM_STATE = 42
+TEST_SIZE = 0.3
 
 # String features
 string_features = [
