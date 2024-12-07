@@ -165,7 +165,7 @@ y_multi = data['type']
 # Apply VarianceThreshold
 print("# Applying VarianceThreshold...")
 variances_df, features_high_variance, features_low_variance = getVariances(0.3, data_noLabel)
-variances_df.to_csv(f'{fSelection_path}variances.csv')
+variances_df.to_csv(f'{fSelection_path}features_variance.csv')
 features_high_variance.to_csv(f'{fSelection_path}features_high_variance.csv')
 features_low_variance.to_csv(f'{fSelection_path}features_low_variance.csv')
 
