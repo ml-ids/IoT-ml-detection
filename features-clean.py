@@ -178,7 +178,7 @@ for k in range(1, data_noLabel.shape[1] + 1):
     binary_file_path = f'{fSelection_path}binary_{k}best_features.csv'
     multi_file_path = f'{fSelection_path}multi_{k}best_features.csv'
     results_binary.append((name,) + process_kbest(data_binary, y_binary, 'label', k, binary_file_path, model))
-    results_multi.append(process_kbest(data_multi, y_multi, 'type', k, multi_file_path, model))
+    results_multi.append((name,) + process_kbest(data_multi, y_multi, 'type', k, multi_file_path, model))
 
 save_results(results_binary, f'{fSelection_path}binary_kbest_{name}_results.csv', columns)
 save_results(results_multi, f'{fSelection_path}multi_kbest_{name}_results.csv', columns)
