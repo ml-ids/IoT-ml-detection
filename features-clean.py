@@ -12,7 +12,6 @@ from sklearn.tree import DecisionTreeClassifier
 import xgboost as xgb
 # Import the feature types definition
 from featureTypesDef import *
-import os
 
 RANDOM_STATE = 42
 LR_MAX_ITER = 300
