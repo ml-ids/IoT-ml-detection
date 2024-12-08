@@ -80,7 +80,7 @@ for feature in boolean_features:
 models = [
     (
         "RandomForest",
-        RandomForestClassifier(),
+        RandomForestClassifier(n_jobs=-1),
     ),  # https://scikit-learn.org/1.5/modules/generated/sklearn.ensemble.RandomForestClassifier.html
     (
         "DecisionTree",

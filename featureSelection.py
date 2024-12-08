@@ -2,12 +2,14 @@ import pandas as pd
 from sklearn.calibration import LabelEncoder
 from sklearn.discriminant_analysis import StandardScaler
 from sklearn.feature_selection import (
+    RFE,
     SelectKBest,
     VarianceThreshold,
     mutual_info_classif,
 )
 from sklearn.metrics import f1_score, precision_score, accuracy_score
 from sklearn.model_selection import train_test_split
+from boruta import BorutaPy
 from utils import *
 
 
@@ -105,6 +107,63 @@ def save_results(results, file_path, columns):
     results_df.to_csv(file_path, index=False)
 
 
+def getRFE(k, data, target, targetName):
+    # selection
+    selector = RFE(estimator=RandomForestClassifier(), n_features_to_select=k)
+    x_rfe = selector.fit_transform(data.drop(columns=targetName), target)
+
+    # Create a DataFrame with the selected features
+    rfe_features = data.drop(columns=targetName).columns[selector.get_support()]
+    x_rfe_df = pd.DataFrame(x_rfe, columns=rfe_features)
+
+    return x_rfe_df
+
+
+def process_rfe(data, target, target_name, k, file_path, model):
+    try:
+        x_rfe_df = pd.read_csv(file_path)
+        print(f"# {file_path} already exists. Skipping RFE computation for k={k}.")
+    except FileNotFoundError:
+        print(f"# Applying RFE for {target_name} target with k={k}...")
+        x_rfe_df = getRFE(k, data, target, target_name)
+        x_rfe_df[target_name] = target.values
+        x_rfe_df.to_csv(file_path, index=False)
+    x_rfe_df = x_rfe_df.drop(columns=[target_name], axis=1)
+    x_train, x_test, y_train, y_test = train_test_split(
+        x_rfe_df, target, test_size=TEST_SIZE, random_state=RANDOM_STATE
+    )
+    print(f"# Training...")
+    model.fit(x_train, y_train)
+    print(f"# Predicting...")
+    y_pred = model.predict(x_test)
+    accuracy, precision, f1 = calculate_metrics(y_test, y_pred)
+    rfe_features_names = x_rfe_df.columns.tolist()
+    return (k, accuracy, precision, f1, rfe_features_names)
+
+
+def apply_boruta(data_noLabel, target, target_name, model):
+    x_train, x_test, y_train, y_test = train_test_split(
+        data_noLabel, target, test_size=TEST_SIZE, random_state=RANDOM_STATE
+    )
+    print(f"# Applying Boruta for {target_name} classification...")
+    boruta = BorutaPy(
+        model,
+        n_estimators="auto",
+        verbose=2,
+        random_state=RANDOM_STATE,
+    )
+    boruta.fit(x_train.values, y_train.values)
+    sel_x_train = boruta.transform(x_train.values)
+    sel_x_test = boruta.transform(x_test.values)
+    model.fit(sel_x_train, y_train)
+    y_pred = model.predict(sel_x_test)
+    accuracy, precision, f1 = calculate_metrics(y_test, y_pred)
+    selected_features_mask = boruta.support_
+    selected_features = x_train.columns[selected_features_mask].tolist()
+    return (accuracy, precision, f1, selected_features)
+
+
+name, model = models[0]
 # Load the data
 print("# Loading data...")
 data = pd.read_csv(
@@ -175,7 +234,6 @@ results_binary = []
 results_multi = []
 columns = ["Model", "K", "Accuracy", "Precision", "F1-Score", "Features"]
 for k in range(1, data_noLabel.shape[1] + 1):
-    name, model = models[0]
     binary_file_path = f"{FSELECTION_PATH}binary_{k}best_features.csv"
     multi_file_path = f"{FSELECTION_PATH}multi_{k}best_features.csv"
     results_binary.append(
@@ -191,8 +249,44 @@ save_results(
 )
 save_results(results_multi, f"{FSELECTION_PATH}multi_kbest_{name}_results.csv", columns)
 
-print(f"# Results in {FSELECTION_PATH}")
+# Apply RFE
+results_binary = []
+results_multi = []
+columns = ["Model", "K", "Accuracy", "Precision", "F1-Score", "Features"]
+for k in range(1, data_noLabel.shape[1] + 1):
+    binary_file_path = f"{FSELECTION_PATH}binary_{k}rfe_features.csv"
+    multi_file_path = f"{FSELECTION_PATH}multi_{k}rfe_features.csv"
+    results_binary.append(
+        (name,)
+        + process_rfe(data_binary, y_binary, "label", k, binary_file_path, model)
+    )
+    results_multi.append(
+        (name,) + process_rfe(data_multi, y_multi, "type", k, multi_file_path, model)
+    )
 
+save_results(results_binary, f"{FSELECTION_PATH}binary_rfe_{name}_results.csv", columns)
+save_results(results_multi, f"{FSELECTION_PATH}multi_rfe_{name}_results.csv", columns)
+
+# Apply Boruta
+columns = ["Model", "Accuracy", "Precision", "F1-Score", "Features"]
+accuracy, precision, f1, selected_features = apply_boruta(
+    data_noLabel, y_binary, "label", model
+)
+save_results(
+    [(name, accuracy, precision, f1, selected_features)],
+    f"{FSELECTION_PATH}binary_boruta_{name}_results.csv",
+    columns,
+)
+accuracy, precision, f1, selected_features = apply_boruta(
+    data_noLabel, y_multi, "type", model
+)
+save_results(
+    [(name, accuracy, precision, f1, selected_features)],
+    f"{FSELECTION_PATH}multi_boruta_{name}_results.csv",
+    columns,
+)
+
+print(f"# Results in {FSELECTION_PATH}")
 
 # correlation_matrix = data_cleaned.corr()
 # plt.figure(figsize=(20, 20))
