@@ -61,7 +61,7 @@ if args.verbose > 0:
         print(f"{column}: {df[column].dtype}")
 
 # Plot the data types of each feature/column
-plt.figure(figsize=(14, 8))
+plt.figure(figsize=(12, 8))
 df.dtypes.value_counts().plot(kind="bar", color="#007698")
 plt.title("Data Types of Features")
 plt.xlabel("Data Type")
@@ -100,14 +100,16 @@ else:
 
 
 # same for integer values
-plt.figure(figsize=(14, 8))
+plt.figure(figsize=(12, 8))
 unique_counts = df.select_dtypes(include=["int64"]).nunique()
 unique_counts.plot(kind="bar", color="#007698")
 plt.title("Number of Unique Items per Integer Features")
 plt.xlabel("Feature/Column")
 plt.ylabel("Number of Unique Items")
-plt.figtext(0, 0, f"{args.data_set}", fontsize=10)
+plt.figtext(0.01, 0.01, f"{args.data_set}", fontsize=8)
 plt.subplots_adjust(bottom=0.2)
+plt.tight_layout()
+
 for i, count in enumerate(unique_counts):
     plt.text(i, count, str(count), ha="center", va="bottom")
 
@@ -117,43 +119,41 @@ else:
     plt.savefig("graphics/features-integer-unique.png")
 
 # Print the unique count of the 'type'/'label' field
-plt.figure(figsize=(14, 8))
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7), gridspec_kw={'width_ratios': [3, 1]})
+
+# Multiclass Class Distribution
 type_counts = df["type"].value_counts()
-type_counts.plot(kind="bar", color=["#007698"])
-plt.title("Multiclass Class Distribution")
-plt.xlabel("Type")
-plt.ylabel("Count")
-plt.figtext(0, 0, f"{args.data_set}", fontsize=8)
-plt.ylim(0, type_counts.max() * 1.1)
-plt.subplots_adjust(bottom=0.2)
+type_counts.plot(kind="bar", color=["#007698"], ax=ax1)
+ax1.set_title("Multiclass Class Distribution")
+ax1.set_xlabel("Type")
+ax1.set_ylabel("Count")
+ax1.set_ylim(0, type_counts.max() * 1.1)
 for i, count in enumerate(type_counts):
     percentage = count / type_counts.sum() * 100
-    plt.text(
-        i, count, f"{count}\n{percentage:.2f}%", ha="center", va="bottom", fontsize=10
-    )
+    ax1.text(i, count, f"{percentage:.2f}%\n{count}", ha="center", va="bottom", fontsize=10)
+
+# Binary Class Distribution
+type_counts = df["label"].value_counts()
+type_counts.index = type_counts.index.map({False: "0 - benign", True: "1 - attack"})
+type_counts.plot(kind="bar", color=["#007698"], ax=ax2)
+ax2.set_title("Binary Class Distribution")
+ax2.set_xlabel("Type")
+ax2.set_ylabel("Count")
+ax2.set_ylim(0, type_counts.max() * 1.1)
+ax2.set_xticks(range(len(type_counts)))
+ax2.set_xticklabels(type_counts.index, rotation=0)
+for i, count in enumerate(type_counts):
+    percentage = count / type_counts.sum() * 100
+    ax2.text(i, count, f"{percentage:.2f}%\n{count}", ha="center", va="bottom", fontsize=10)
+
+plt.figtext(0.01, 0.01, f"{args.data_set}", fontsize=8)
+plt.subplots_adjust(bottom=0.2)
+plt.tight_layout()
 
 if args.show:
     plt.show()
 else:
-    plt.savefig("graphics/multiclass-distribution.png")
-
-print(df["type"].value_counts(normalize=True))
-
-plt.figure(figsize=(8, 8))
-type_counts = df["label"].value_counts()
-type_counts.index = type_counts.index.map({False: "0 - benign", True: "1 - attack"})
-type_counts.plot(kind="bar", color=["#007698"])
-plt.title("Binary Class Distribution")
-plt.xlabel("Type")
-plt.ylabel("Count")
-plt.xticks(rotation=0)
-plt.figtext(0, 0, f"{args.data_set}", fontsize=8)
-plt.subplots_adjust(bottom=0.2)
-for i, count in enumerate(type_counts):
-    percentage = count / type_counts.sum() * 100
-    plt.text(
-        i, count, f"{count} ({percentage:.2f}%)", ha="center", va="bottom", fontsize=10
-    )
+    plt.savefig("graphics/label-distributions.png")
 
 # or pie chart?
 # plt.figure(figsize=(7, 7))
@@ -166,12 +166,7 @@ for i, count in enumerate(type_counts):
 # plt.pie(type_counts, autopct='%1.1f%% ')
 
 
-if args.show:
-    plt.show()
-else:
-    plt.savefig("graphics/binary-distribution.png")
-del plt
-
+print(df["type"].value_counts(normalize=True))
 print(df["label"].value_counts(normalize=True))
 
 
