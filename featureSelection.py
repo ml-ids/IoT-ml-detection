@@ -12,14 +12,19 @@ from sklearn.model_selection import train_test_split
 from boruta import BorutaPy
 from utils import *
 
+name, model = models[0]
 
-def scaleEncode(x):
+
+def scale(x):
     print("# Scaling numerical features...")
     numerical_features = int_features + float_features
     scaler = StandardScaler()
     x_numerical_scaled = scaler.fit_transform(x[numerical_features])
     numerical_df = pd.DataFrame(x_numerical_scaled, columns=numerical_features)
-    # Encode categorical features using LabelEncoder
+    return pd.concat([numerical_df, data.drop(columns=numerical_features)], axis=1)
+
+
+def encode(x):
     print("# Encoding categorical features...")
     categorical_features = string_features + boolean_features
     label_encoded_dfs = []
@@ -27,11 +32,16 @@ def scaleEncode(x):
         encoder = LabelEncoder()
         x[col] = encoder.fit_transform(x[col])
         label_encoded_dfs.append(x[col])
-    # Combine scaled numerical and label-encoded categorical features
-    print("# Combining scaled and encoded features...")
     label_encoded_df = pd.concat(label_encoded_dfs, axis=1)
-    x_prep = pd.concat([numerical_df, label_encoded_df], axis=1)
-    return x_prep
+    return pd.concat(
+        [label_encoded_df, data.drop(columns=categorical_features)], axis=1
+    )
+
+
+def scaleEncode(x):
+    scaled_df = scale(x)
+    scaledEncoded_df = encode(scaled_df)
+    return scaledEncoded_df
 
 
 def fillMissingValues(data):
@@ -80,7 +90,7 @@ def getKBest(k, data, target, targetName):
     return x_kbest_df
 
 
-def process_kbest(data, target, target_name, k, file_path, model):
+def process_kbest(data, target, target_name, k, file_path):
     try:
         x_kbest_df = pd.read_csv(file_path)
         print(f"# {file_path} already exists. Skipping KBest computation for k={k}.")
@@ -119,7 +129,7 @@ def getRFE(k, data, target, targetName):
     return x_rfe_df
 
 
-def process_rfe(data, target, target_name, k, file_path, model):
+def process_rfe(data, target, target_name, k, file_path):
     try:
         x_rfe_df = pd.read_csv(file_path)
         print(f"# {file_path} already exists. Skipping RFE computation for k={k}.")
@@ -141,7 +151,7 @@ def process_rfe(data, target, target_name, k, file_path, model):
     return (k, accuracy, precision, f1, rfe_features_names)
 
 
-def apply_boruta(data_noLabel, target, target_name, model):
+def apply_boruta(data_noLabel, target, target_name):
     x_train, x_test, y_train, y_test = train_test_split(
         data_noLabel, target, test_size=TEST_SIZE, random_state=RANDOM_STATE
     )
@@ -163,7 +173,6 @@ def apply_boruta(data_noLabel, target, target_name, model):
     return (accuracy, precision, f1, selected_features)
 
 
-name, model = models[0]
 # Load the data
 print("# Loading data...")
 data = pd.read_csv(
@@ -211,7 +220,7 @@ print(counts.to_string())
 data = fillMissingValues(data)
 print("# Filled missing values in the train dataset.")
 
-# Scale numerical features
+# Scale and encode features
 data_prep = scaleEncode(data)
 # Split the data into features and target variables
 data_binary = data_prep.drop(columns=["type"], axis=1)
@@ -237,13 +246,11 @@ for k in range(1, data_noLabel.shape[1] + 1):
     binary_file_path = f"{FSELECTION_PATH}binary_{k}best_features.csv"
     multi_file_path = f"{FSELECTION_PATH}multi_{k}best_features.csv"
     results_binary.append(
-        (name,)
-        + process_kbest(data_binary, y_binary, "label", k, binary_file_path, model)
+        (name,) + process_kbest(data_binary, y_binary, "label", k, binary_file_path)
     )
     results_multi.append(
-        (name,) + process_kbest(data_multi, y_multi, "type", k, multi_file_path, model)
+        (name,) + process_kbest(data_multi, y_multi, "type", k, multi_file_path)
     )
-
 save_results(
     results_binary, f"{FSELECTION_PATH}binary_kbest_{name}_results.csv", columns
 )
@@ -257,29 +264,25 @@ for k in range(1, data_noLabel.shape[1] + 1):
     binary_file_path = f"{FSELECTION_PATH}binary_{k}rfe_features.csv"
     multi_file_path = f"{FSELECTION_PATH}multi_{k}rfe_features.csv"
     results_binary.append(
-        (name,)
-        + process_rfe(data_binary, y_binary, "label", k, binary_file_path, model)
+        (name,) + process_rfe(data_binary, y_binary, "label", k, binary_file_path)
     )
     results_multi.append(
-        (name,) + process_rfe(data_multi, y_multi, "type", k, multi_file_path, model)
+        (name,) + process_rfe(data_multi, y_multi, "type", k, multi_file_path)
     )
-
 save_results(results_binary, f"{FSELECTION_PATH}binary_rfe_{name}_results.csv", columns)
 save_results(results_multi, f"{FSELECTION_PATH}multi_rfe_{name}_results.csv", columns)
 
 # Apply Boruta
 columns = ["Model", "Accuracy", "Precision", "F1-Score", "Features"]
 accuracy, precision, f1, selected_features = apply_boruta(
-    data_noLabel, y_binary, "label", model
+    data_noLabel, y_binary, "label"
 )
 save_results(
     [(name, accuracy, precision, f1, selected_features)],
     f"{FSELECTION_PATH}binary_boruta_{name}_results.csv",
     columns,
 )
-accuracy, precision, f1, selected_features = apply_boruta(
-    data_noLabel, y_multi, "type", model
-)
+accuracy, precision, f1, selected_features = apply_boruta(data_noLabel, y_multi, "type")
 save_results(
     [(name, accuracy, precision, f1, selected_features)],
     f"{FSELECTION_PATH}multi_boruta_{name}_results.csv",
