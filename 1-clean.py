@@ -54,12 +54,6 @@ for col in boolean_features:
     df[col] = df[col].astype(bool)
 
 
-if args.verbose > 0:
-    print("Data types:\n")
-    # Print all labels with their data types
-    for column in df.columns:
-        print(f"{column}: {df[column].dtype}")
-
 # Plot the data types of each feature/column
 plt.figure(figsize=(12, 8))
 df.dtypes.value_counts().plot(kind="bar", color="#007698")
@@ -164,10 +158,85 @@ else:
 # plt.figtext(0, 0, f"{args.data_set}", fontsize=8)
 # plt.subplots_adjust(bottom=0.2)
 # plt.pie(type_counts, autopct='%1.1f%% ')
-
-
 print(df["type"].value_counts(normalize=True))
 print(df["label"].value_counts(normalize=True))
+
+
+# bar chart by proto, split by label
+proto_label_counts = df.groupby(['proto', 'label']).size().unstack(fill_value=0)
+proto_label_counts = proto_label_counts.loc[proto_label_counts.sum(axis=1).sort_values(ascending=False).index]
+proto_label_counts.plot(kind='bar', stacked=True, figsize=(14, 8), color=["#007698","#ff8c00"])
+plt.title("Service Distribution by Proto")
+plt.xlabel("Protocol")
+plt.ylabel("Count")
+plt.legend(title="Label", labels=["Benign", "Attack"])
+plt.figtext(0.01, 0.01, f"{args.data_set}", fontsize=8)
+plt.subplots_adjust(bottom=0.2)
+plt.tight_layout()
+for i, (proto, row) in enumerate(proto_label_counts.iterrows()):
+    total = row.sum()
+    for j, count in enumerate(row):
+        percentage = count / df['proto'].value_counts().sum() * 100
+        if percentage >= 2:
+            plt.text(i, count, f"{percentage:.0f}%\n{count}", ha="center", va="bottom", fontsize=10)
+
+if args.show:
+    plt.show()
+else:
+    plt.savefig("graphics/label-distribution-proto.png")
+
+# bar chart by proto, split by label
+service_label_counts = df.groupby(['service', 'label']).size().unstack(fill_value=0)
+service_label_counts = service_label_counts.loc[service_label_counts.sum(axis=1).sort_values(ascending=False).index]
+service_label_counts.plot(kind='bar', stacked=True, figsize=(14, 8), color=["#007698","#ff8c00"])
+plt.title("Service Distribution by Label")
+plt.xlabel("Protocol")
+plt.ylabel("Count")
+plt.legend(title="Label", labels=["Benign", "Attack"])
+plt.figtext(0.01, 0.01, f"{args.data_set}", fontsize=8)
+plt.subplots_adjust(bottom=0.2)
+plt.tight_layout()
+for i, (port, row) in enumerate(proto_label_counts.iterrows()):
+    total = row.sum()
+    for j, count in enumerate(row):
+        percentage = count / df['dst_port'].value_counts().sum() * 100
+        if percentage >= 1:
+            plt.text(i, count, f"{percentage:.0f}%\n{count}", ha="center", va="bottom", fontsize=10)
+if args.show:
+    plt.show()
+else:
+    plt.savefig("graphics/label-distribution-service.png")    
+
+
+# bar chart of top 10 dst_ports, splited by label
+top10_dst_ports = df['dst_port'].value_counts().nlargest(10).index
+dst_port_label_counts = df[df['dst_port'].isin(top10_dst_ports)].groupby(['dst_port', 'label']).size().unstack(fill_value=0)
+dst_port_label_counts = dst_port_label_counts.loc[dst_port_label_counts.sum(axis=1).sort_values(ascending=False).index]
+dst_port_label_counts.plot(kind='bar', stacked=True, figsize=(14, 8), color=["#007698","#ff8c00"])
+plt.title("Top 10 Destination Destination Ports")
+plt.xlabel("Destination Port")
+plt.ylabel("Count")
+plt.legend(title="Label", labels=["Benign", "Attack"])
+plt.figtext(0.01, 0.01, f"{args.data_set}", fontsize=8)
+plt.subplots_adjust(bottom=0.2)
+plt.tight_layout()
+for i, (port, row) in enumerate(dst_port_label_counts.iterrows()):
+    total = row.sum()
+    for j, count in enumerate(row):
+        percentage = count / df['dst_port'].value_counts().sum() * 100
+        if percentage >= 1:
+            plt.text(i, count, f"{percentage:.0f}%\n{count}", ha="center", va="bottom", fontsize=10)
+if args.show:
+    plt.show()
+else:
+    plt.savefig("graphics/label-distribution-top10-dstport.png")
+
+exit()
+if args.verbose > 0:
+    print("Data types:\n")
+    # Print all labels with their data types
+    for column in df.columns:
+        print(f"{column}: {df[column].dtype}")        
 
 
 df.to_csv(os.path.splitext(args.data_set)[0] + "_clean.csv", index=False)
