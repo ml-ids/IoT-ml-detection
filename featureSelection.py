@@ -227,8 +227,8 @@ data_prep = scaleEncode(data)
 data_binary = data_prep.drop(columns=["type"], axis=1)
 data_multi = data_prep.drop(columns=["label"], axis=1)
 data_noLabel = data_prep.drop(columns=["label", "type"], axis=1)
-y_binary = data["label"]
-y_multi = data["type"]
+y_binary = data_prep["label"]
+y_multi = data_prep["type"]
 
 # Apply VarianceThreshold
 print("# Applying VarianceThreshold...")
