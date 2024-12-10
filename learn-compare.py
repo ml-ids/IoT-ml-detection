@@ -8,13 +8,14 @@ from typing import List, Tuple
 from utils import (
     models,
     FSELECTION_PATH,
+    DATASET_PATH,
     MODELS_COMPARISON_PATH,
     RANDOM_STATE,
     TEST_SIZE,
 )
 
 # Constants
-DATASET_NAME = "binary_10best_features.csv"
+DATASET_NAME = "features-clean.csv"
 LR_MAX_ITER = 300
 
 
@@ -55,7 +56,7 @@ def train_and_evaluate(
 
 
 print("# Loading dataset...")
-data_cleaned = pd.read_csv(f"{FSELECTION_PATH}{DATASET_NAME}")
+data_cleaned = pd.read_csv(f"{DATASET_PATH}{DATASET_NAME}")
 X = data_cleaned.drop("label", axis=1)
 y = data_cleaned["label"]
 

@@ -64,17 +64,17 @@ def calculate_metrics(y_test, y_pred):
 
 
 def getVariances(threshold, data):
-    var_threshold = VarianceThreshold(threshold=threshold)  # Set the threshold to 0.3
+    var_threshold = VarianceThreshold(threshold=threshold)
     var_threshold.fit(data)
     variances = var_threshold.variances_
     # Create a DataFrame for variances
     variances_df = pd.DataFrame(variances, index=data.columns, columns=["Variance"])
     # Sort variances in descending order
     variances_df = variances_df.sort_values(by="Variance", ascending=False)
-    # Print features with variance >= 0.3
-    features_high_variance = variances_df[variances_df["Variance"] >= 0.3]
-    # Print features with variance < 0.3
-    features_low_variance = variances_df[variances_df["Variance"] < 0.3]
+    # Features with variance >= threshold
+    features_high_variance = variances_df[variances_df["Variance"] >= threshold]
+    # Features with variance < threshold
+    features_low_variance = variances_df[variances_df["Variance"] < threshold]
     return variances_df, features_high_variance, features_low_variance
 
 
