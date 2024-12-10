@@ -55,7 +55,7 @@ for col in boolean_features:
 
 
 # Plot the data types of each feature/column
-plt.figure(figsize=(12, 8))
+plt.figure(figsize=(12, 4))
 df.dtypes.value_counts().plot(kind="bar", color="#007698")
 plt.title("Data Types of Features")
 plt.xlabel("Data Type")
@@ -71,7 +71,7 @@ else:
     plt.savefig("graphics/features-datatypes.png")
 
 # Plot the number of unique items per feature/column, also drop ip and type for comparision
-plt.figure(figsize=(14, 8))
+plt.figure(figsize=(12, 5))
 unique_counts = (
     df.select_dtypes(include=["object"])
     .drop(columns=["src_ip", "dst_ip", "type"])
@@ -81,8 +81,9 @@ unique_counts.plot(kind="bar", color="#007698")
 plt.title("Number of Unique Items per Categorical Features")
 plt.xlabel("Feature/Column")
 plt.ylabel("Number of Unique Items")
+plt.xticks(rotation=45)
 plt.figtext(0, 0, f"{args.data_set}", fontsize=10)
-plt.subplots_adjust(bottom=0.2)
+plt.subplots_adjust(bottom=0.3)
 
 for i, count in enumerate(unique_counts):
     plt.text(i, count, str(count), ha="center", va="bottom")
@@ -94,14 +95,15 @@ else:
 
 
 # same for integer values
-plt.figure(figsize=(12, 8))
+plt.figure(figsize=(12, 5))
 unique_counts = df.select_dtypes(include=["int64"]).nunique()
 unique_counts.plot(kind="bar", color="#007698")
 plt.title("Number of Unique Items per Integer Features")
 plt.xlabel("Feature/Column")
 plt.ylabel("Number of Unique Items")
 plt.figtext(0.01, 0.01, f"{args.data_set}", fontsize=8)
-plt.subplots_adjust(bottom=0.2)
+plt.subplots_adjust(bottom=0.3)
+plt.xticks(rotation=45)
 plt.tight_layout()
 
 for i, count in enumerate(unique_counts):
@@ -120,7 +122,7 @@ type_counts = df["type"].value_counts()
 type_counts.plot(kind="bar", color=["#007698"], ax=ax1)
 ax1.set_title("Multiclass Class Distribution")
 ax1.set_xlabel("Type")
-ax1.set_ylabel("Count")
+ax1.set_ylabel("Flow Count")
 ax1.set_ylim(0, type_counts.max() * 1.1)
 for i, count in enumerate(type_counts):
     percentage = count / type_counts.sum() * 100
@@ -132,7 +134,7 @@ type_counts.index = type_counts.index.map({False: "0 - benign", True: "1 - attac
 type_counts.plot(kind="bar", color=["#007698"], ax=ax2)
 ax2.set_title("Binary Class Distribution")
 ax2.set_xlabel("Type")
-ax2.set_ylabel("Count")
+ax2.set_ylabel("Flow Count")
 ax2.set_ylim(0, type_counts.max() * 1.1)
 ax2.set_xticks(range(len(type_counts)))
 ax2.set_xticklabels(type_counts.index, rotation=0)
@@ -165,20 +167,25 @@ print(df["label"].value_counts(normalize=True))
 # bar chart by proto, split by label
 proto_label_counts = df.groupby(['proto', 'label']).size().unstack(fill_value=0)
 proto_label_counts = proto_label_counts.loc[proto_label_counts.sum(axis=1).sort_values(ascending=False).index]
-proto_label_counts.plot(kind='bar', stacked=True, figsize=(14, 8), color=["#007698","#ff8c00"])
+proto_label_counts.drop(index='icmp', errors='ignore').plot(kind='barh', stacked=True, figsize=(14, 3), color=["#007698","#ff8c00"])
 plt.title("Service Distribution by Proto")
-plt.xlabel("Protocol")
-plt.ylabel("Count")
+plt.xlabel("Flow Count")
+plt.ylabel("Protocol")
 plt.legend(title="Label", labels=["Benign", "Attack"])
 plt.figtext(0.01, 0.01, f"{args.data_set}", fontsize=8)
 plt.subplots_adjust(bottom=0.2)
 plt.tight_layout()
 for i, (proto, row) in enumerate(proto_label_counts.iterrows()):
-    total = row.sum()
+    cumulative_total = 0  # To track the cumulative position for stacking
     for j, count in enumerate(row):
-        percentage = count / df['proto'].value_counts().sum() * 100
-        if percentage >= 2:
-            plt.text(i, count, f"{percentage:.0f}%\n{count}", ha="center", va="bottom", fontsize=10)
+        if count > 0:  # Only label if there's a positive count
+            cumulative_total += count
+            percentage = count / proto_label_counts.values.sum() * 100
+            if percentage >= 1:  # Only add labels for significant bars
+                plt.text(
+                    cumulative_total - count / 2,  # Place label at the center of the current bar segment
+                    i, 
+                    f"{percentage:.0f}%\n{count}", ha="center", va="center", fontsize=10)
 
 if args.show:
     plt.show()
@@ -191,7 +198,7 @@ service_label_counts = service_label_counts.loc[service_label_counts.sum(axis=1)
 service_label_counts.plot(kind='bar', stacked=True, figsize=(14, 8), color=["#007698","#ff8c00"])
 plt.title("Service Distribution by Label")
 plt.xlabel("Protocol")
-plt.ylabel("Count")
+plt.ylabel("Flow Count")
 plt.legend(title="Label", labels=["Benign", "Attack"])
 plt.figtext(0.01, 0.01, f"{args.data_set}", fontsize=8)
 plt.subplots_adjust(bottom=0.2)
@@ -215,7 +222,7 @@ dst_port_label_counts = dst_port_label_counts.loc[dst_port_label_counts.sum(axis
 dst_port_label_counts.plot(kind='bar', stacked=True, figsize=(14, 8), color=["#007698","#ff8c00"])
 plt.title("Top 10 Destination Destination Ports")
 plt.xlabel("Destination Port")
-plt.ylabel("Count")
+plt.ylabel("Flow Count")
 plt.legend(title="Label", labels=["Benign", "Attack"])
 plt.figtext(0.01, 0.01, f"{args.data_set}", fontsize=8)
 plt.subplots_adjust(bottom=0.2)
@@ -231,12 +238,61 @@ if args.show:
 else:
     plt.savefig("graphics/label-distribution-top10-dstport.png")
 
-exit()
 if args.verbose > 0:
     print("Data types:\n")
     # Print all labels with their data types
     for column in df.columns:
         print(f"{column}: {df[column].dtype}")        
+
+
+
+# bar chart of src_ip, split by label
+top10_src_ips = df['src_ip'].value_counts().nlargest(10).index
+src_ip_label_counts = df[df['src_ip'].isin(top10_src_ips)].groupby(['src_ip', 'label']).size().unstack(fill_value=0)
+src_ip_label_counts = src_ip_label_counts.loc[src_ip_label_counts.sum(axis=1).sort_values(ascending=False).index]
+src_ip_label_counts.plot(kind='bar', stacked=True, figsize=(14, 8), color=["#007698", "#ff8c00"])
+plt.title("Source Top10 IP Distribution by Label")
+plt.xlabel("Source IP")
+plt.ylabel("Flow Count")
+plt.legend(title="Label", labels=["Benign", "Attack"])
+plt.figtext(0.01, 0.01, f"{args.data_set}", fontsize=8)
+plt.subplots_adjust(bottom=0.2)
+plt.tight_layout()
+for i, (ip, row) in enumerate(src_ip_label_counts.iterrows()):
+    total = row.sum()
+    for j, count in enumerate(row):
+        percentage = count / df['src_ip'].value_counts().sum() * 100
+        if percentage >= 1:
+            plt.text(i, count, f"{percentage:.0f}%\n{count}", ha="center", va="bottom", fontsize=10)
+if args.show:
+    plt.show()
+else:
+    plt.savefig("graphics/label-distribution-srcip.png")
+
+
+# bar chart of dst_ip, split by label
+top10_dst_ips = df['dst_ip'].value_counts().nlargest(10).index
+dst_ip_label_counts = df[df['dst_ip'].isin(top10_dst_ips)].groupby(['dst_ip', 'label']).size().unstack(fill_value=0)
+dst_ip_label_counts = dst_ip_label_counts.loc[dst_ip_label_counts.sum(axis=1).sort_values(ascending=False).index]
+dst_ip_label_counts.plot(kind='bar', stacked=True, figsize=(14, 8), color=["#007698", "#ff8c00"])
+plt.title("Destination Top10 IP Distribution by Label")
+plt.xlabel("Source IP")
+plt.ylabel("Flow Count")
+plt.legend(title="Label", labels=["Benign", "Attack"])
+plt.figtext(0.01, 0.01, f"{args.data_set}", fontsize=8)
+plt.subplots_adjust(bottom=0.2)
+plt.tight_layout()
+for i, (ip, row) in enumerate(dst_ip_label_counts.iterrows()):
+    total = row.sum()
+    for j, count in enumerate(row):
+        percentage = count / df['dst_ip'].value_counts().sum() * 100
+        if percentage >= 1:
+            plt.text(i, count, f"{percentage:.0f}%\n{count}", ha="center", va="bottom", fontsize=10)
+if args.show:
+    plt.show()
+else:
+    plt.savefig("graphics/label-distribution-dstip.png")
+
 
 
 df.to_csv(os.path.splitext(args.data_set)[0] + "_clean.csv", index=False)

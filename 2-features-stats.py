@@ -15,6 +15,8 @@ parser.add_argument("-d", "--data-set", type=str, help="Path to the data set.", 
 parser.add_argument("-s", "--show", action="store_true", default=False, help="show graphics instead of saving in graphics/ folder")
 args = parser.parse_args()
 
+
+#  we could load the dataset plus the definition of the dataset or just use the pkl file
 # df = pd.read_csv(args.data_set)
 # df_definition = args.data_set.replace('.csv', '_dataset.json')
 
@@ -24,7 +26,6 @@ args = parser.parse_args()
 #     df_loaded = df.astype(df_definition)
 # else:
     # print(f"{df_definition} no definition, load as plain csv.")
-
 
 df = pd.read_pickle(args.data_set)
 
