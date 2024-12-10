@@ -1,5 +1,5 @@
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, precision_score, f1_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.linear_model import LogisticRegression
 from imblearn.over_sampling import SMOTE
 from sklearn.preprocessing import StandardScaler
@@ -29,14 +29,15 @@ def calculate_metrics(
     y_pred: pd.Series,
     model_name: str,
     method: str,
-    results: List[Tuple[str, str, float, float, float]],
+    results: List[Tuple[str, str, float, float, float, float]],
 ):
     accuracy = accuracy_score(y_test, y_pred)
     precision = precision_score(y_test, y_pred, average="weighted")
+    recall = recall_score(y_test, y_pred, average="weighted")
     f1 = f1_score(y_test, y_pred, average="weighted")
-    results.append((model_name, method, accuracy, precision, f1))
+    results.append((model_name, method, accuracy, precision, recall, f1))
     print(
-        f"{model_name} (Method {method}): Accuracy = {accuracy:.8f}, Precision = {precision:.8f}, F1-Score = {f1:.8f}"
+        f"{model_name} (Method {method}): Accuracy = {accuracy:.8f}, Precision = {precision:.8f}, Recall = {recall:.8f}, F1-Score = {f1:.8f}"
     )
 
 
@@ -47,7 +48,7 @@ def train_and_evaluate(
     X_test: pd.DataFrame,
     y_test: pd.Series,
     method: str,
-    results: List[Tuple[str, str, float, float, float]],
+    results: List[Tuple[str, str, float, float, float, float]],
 ):
     for name, model in models:
         model.fit(X_train, y_train)
@@ -100,7 +101,7 @@ for method in ["None", "SMOTE"]:
 
 print("# Saving results to CSV...")
 results_df = pd.DataFrame(
-    results, columns=["Model", "Method", "Accuracy", "Precision", "F1-Score"]
+    results, columns=["Model", "Method", "Accuracy", "Precision", "Recall", "F1-Score"]
 )
 results_df.to_csv(
     f"{MODELS_COMPARISON_PATH}{DATASET_NAME.replace('.csv', '')}_compare.csv",

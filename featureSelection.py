@@ -7,7 +7,7 @@ from sklearn.feature_selection import (
     VarianceThreshold,
     mutual_info_classif,
 )
-from sklearn.metrics import f1_score, precision_score, accuracy_score
+from sklearn.metrics import f1_score, recall_score, precision_score, accuracy_score
 from sklearn.model_selection import train_test_split
 from boruta import BorutaPy
 from utils import *
@@ -59,8 +59,9 @@ def fillMissingValues(data):
 def calculate_metrics(y_test, y_pred):
     accuracy = accuracy_score(y_test, y_pred)
     precision = precision_score(y_test, y_pred, average="weighted")
+    recall = recall_score(y_test, y_pred, average="weighted")
     f1 = f1_score(y_test, y_pred, average="weighted")
-    return (accuracy, precision, f1)
+    return (accuracy, precision, recall, f1)
 
 
 def getVariances(threshold, data):
@@ -107,9 +108,9 @@ def process_kbest(data, target, target_name, k, file_path):
     model.fit(x_train, y_train)
     print(f"# Predicting...")
     y_pred = model.predict(x_test)
-    accuracy, precision, f1 = calculate_metrics(y_test, y_pred)
+    accuracy, precision, recall, f1 = calculate_metrics(y_test, y_pred)
     kbest_features_names = x_kbest_df.columns.tolist()
-    return (k, accuracy, precision, f1, kbest_features_names)
+    return (k, accuracy, precision, recall, f1, kbest_features_names)
 
 
 def save_results(results, file_path, columns):
@@ -146,9 +147,9 @@ def process_rfe(data, target, target_name, k, file_path):
     model.fit(x_train, y_train)
     print(f"# Predicting...")
     y_pred = model.predict(x_test)
-    accuracy, precision, f1 = calculate_metrics(y_test, y_pred)
+    accuracy, precision, recall, f1 = calculate_metrics(y_test, y_pred)
     rfe_features_names = x_rfe_df.columns.tolist()
-    return (k, accuracy, precision, f1, rfe_features_names)
+    return (k, accuracy, precision, recall, f1, rfe_features_names)
 
 
 def apply_boruta(data_noLabel, target, target_name):
@@ -167,10 +168,10 @@ def apply_boruta(data_noLabel, target, target_name):
     sel_x_test = boruta.transform(x_test.values)
     model.fit(sel_x_train, y_train)
     y_pred = model.predict(sel_x_test)
-    accuracy, precision, f1 = calculate_metrics(y_test, y_pred)
+    accuracy, precision, recall, f1 = calculate_metrics(y_test, y_pred)
     selected_features_mask = boruta.support_
     selected_features = x_train.columns[selected_features_mask].tolist()
-    return (accuracy, precision, f1, selected_features)
+    return (accuracy, precision, recall, f1, selected_features)
 
 
 # Load the data
@@ -241,7 +242,7 @@ features_low_variance.to_csv(f"{FSELECTION_PATH}features_low_variance.csv")
 # Apply KBest
 results_binary = []
 results_multi = []
-columns = ["Model", "K", "Accuracy", "Precision", "F1-Score", "Features"]
+columns = ["Model", "K", "Accuracy", "Precision", "Recall", "F1-Score", "Features"]
 for k in range(1, data_noLabel.shape[1] + 1):
     binary_file_path = f"{FSELECTION_PATH}binary_{k}best_features.csv"
     multi_file_path = f"{FSELECTION_PATH}multi_{k}best_features.csv"
@@ -259,7 +260,7 @@ save_results(results_multi, f"{FSELECTION_PATH}multi_kbest_{name}_results.csv", 
 # Apply RFE
 results_binary = []
 results_multi = []
-columns = ["Model", "K", "Accuracy", "Precision", "F1-Score", "Features"]
+columns = ["Model", "K", "Accuracy", "Precision", "Recall", "F1-Score", "Features"]
 for k in range(1, data_noLabel.shape[1] + 1):
     binary_file_path = f"{FSELECTION_PATH}binary_{k}rfe_features.csv"
     multi_file_path = f"{FSELECTION_PATH}multi_{k}rfe_features.csv"
@@ -273,18 +274,18 @@ save_results(results_binary, f"{FSELECTION_PATH}binary_rfe_{name}_results.csv", 
 save_results(results_multi, f"{FSELECTION_PATH}multi_rfe_{name}_results.csv", columns)
 
 # Apply Boruta
-columns = ["Model", "Accuracy", "Precision", "F1-Score", "Features"]
-accuracy, precision, f1, selected_features = apply_boruta(
+columns = ["Model", "Accuracy", "Precision", "Recall", "F1-Score", "Features"]
+accuracy, precision, recall, f1, selected_features = apply_boruta(
     data_noLabel, y_binary, "label"
 )
 save_results(
-    [(name, accuracy, precision, f1, selected_features)],
+    [(name, accuracy, precision, recall, f1, selected_features)],
     f"{FSELECTION_PATH}binary_boruta_{name}_results.csv",
     columns,
 )
-accuracy, precision, f1, selected_features = apply_boruta(data_noLabel, y_multi, "type")
+accuracy, precision, recall, f1, selected_features = apply_boruta(data_noLabel, y_multi, "type")
 save_results(
-    [(name, accuracy, precision, f1, selected_features)],
+    [(name, accuracy, precision, recall, f1, selected_features)],
     f"{FSELECTION_PATH}multi_boruta_{name}_results.csv",
     columns,
 )

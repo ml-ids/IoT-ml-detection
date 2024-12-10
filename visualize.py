@@ -8,14 +8,14 @@ results_df = pd.DataFrame(results_df)
 
 
 # Bar plot for all metrics?
-fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+fig, axes = plt.subplots(1, 4, figsize=(18, 6))
 
 
 # print(plt.style.available)
 # plt.style.use('fivethirtyeight')
 
 # compute min max
-metrics = ["Accuracy", "Precision", "F1-Score"]
+metrics = ["Accuracy", "Precision", "Recall", "F1-Score"]
 y_min = results_df[metrics].min().min() - 0.1  # Minimum of all metrics
 y_max = results_df[metrics].max().max() + 0.1  # Maximum of all metrics
 
@@ -47,14 +47,27 @@ for container in prec_plot.containers:
         container, fmt="%.6f", fontsize=8, label_type="center", padding=1, rotation=90
     )
 
-# F1-Score plot
-f1_plot = results_df.pivot(index="Model", columns="Method", values="F1-Score").plot(
+# Recall plot
+rec_plot = results_df.pivot(index="Model", columns="Method", values="Recall").plot(
     kind="bar", ax=axes[2]
 )
-axes[2].set_title("F1-Score Comparison")
-axes[2].set_ylabel("F1-Score")
+axes[2].set_title("Recall Comparison")
+axes[2].set_ylabel("Recall")
 axes[2].set_xlabel("Model")
 axes[2].set_ylim(y_min, y_max)
+for container in rec_plot.containers:
+    rec_plot.bar_label(
+        container, fmt="%.6f", fontsize=8, label_type="center", padding=1, rotation=90
+    )
+
+# F1-Score plot
+f1_plot = results_df.pivot(index="Model", columns="Method", values="F1-Score").plot(
+    kind="bar", ax=axes[3]
+)
+axes[3].set_title("F1-Score Comparison")
+axes[3].set_ylabel("F1-Score")
+axes[3].set_xlabel("Model")
+axes[3].set_ylim(y_min, y_max)
 for container in f1_plot.containers:
     f1_plot.bar_label(
         container, fmt="%.6f", fontsize=8, label_type="center", padding=1, rotation=90
@@ -71,7 +84,7 @@ plt.show()
 import seaborn as sns
 
 pivot_data = results_df.pivot(index="Model", columns="Method")
-fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+fig, axes = plt.subplots(1, 4, figsize=(18, 6))
 
 
 sns.heatmap(pivot_data["Accuracy"], annot=True, fmt=".6f", cmap="Blues", ax=axes[0])
@@ -84,10 +97,15 @@ axes[1].set_title("Precision Heatmap")
 axes[1].set_xlabel("SMOTE")
 axes[1].set_ylabel("Model")
 
-sns.heatmap(pivot_data["F1-Score"], annot=True, fmt=".6f", cmap="Reds", ax=axes[2])
-axes[2].set_title("F1-Score Heatmap")
+sns.heatmap(pivot_data["Recall"], annot=True, fmt=".6f", cmap="viridis", ax=axes[2])
+axes[2].set_title("Recall Heatmap")
 axes[2].set_xlabel("SMOTE")
 axes[2].set_ylabel("Model")
+
+sns.heatmap(pivot_data["F1-Score"], annot=True, fmt=".6f", cmap="Reds", ax=axes[3])
+axes[3].set_title("F1-Score Heatmap")
+axes[3].set_xlabel("SMOTE")
+axes[3].set_ylabel("Model")
 
 plt.tight_layout()
 plt.show()
