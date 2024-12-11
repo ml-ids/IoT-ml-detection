@@ -204,7 +204,7 @@ counts = y_type.value_counts()
 print(counts.to_string())
 
 # Fill missing values
-# print("# Filling missing values...")
+print("# Filling missing values...")
 data = fillMissingValues(data)
 print("# Filled missing values in the train dataset.")
 
@@ -227,22 +227,22 @@ features_high_variance.to_csv(f"{FSELECTION_PATH}features_high_variance.csv")
 features_low_variance.to_csv(f"{FSELECTION_PATH}features_low_variance.csv")
 
 # Apply KBest
-# results_binary = []
-# results_multi = []
-# columns = ["Model", "K", "Accuracy", "Precision", "Recall", "F1-Score", "Features"]
-# for k in range(1, data_noLabel.shape[1] + 1):
-#     binary_file_path = f"{FSELECTION_PATH}binary_{k}best_features.csv"
-#     multi_file_path = f"{FSELECTION_PATH}multi_{k}best_features.csv"
-#     results_binary.append(
-#         (name,) + process_kbest(data_noLabel, y_binary, "label", k, binary_file_path)
-#     )
-#     results_multi.append(
-#         (name,) + process_kbest(data_noLabel, y_multi, "type", k, multi_file_path)
-#     )
-# save_results(
-#     results_binary, f"{FSELECTION_PATH}binary_kbest_{name}_results.csv", columns
-# )
-# save_results(results_multi, f"{FSELECTION_PATH}multi_kbest_{name}_results.csv", columns)
+results_binary = []
+results_multi = []
+columns = ["Model", "K", "Accuracy", "Precision", "Recall", "F1-Score", "Features"]
+for k in range(1, data_noLabel.shape[1] + 1):
+    binary_file_path = f"{FSELECTION_PATH}binary_{k}best_features.csv"
+    multi_file_path = f"{FSELECTION_PATH}multi_{k}best_features.csv"
+    results_binary.append(
+        (name,) + process_kbest(data_noLabel, y_binary, "label", k, binary_file_path)
+    )
+    results_multi.append(
+        (name,) + process_kbest(data_noLabel, y_multi, "type", k, multi_file_path)
+    )
+save_results(
+    results_binary, f"{FSELECTION_PATH}binary_kbest_{name}_results.csv", columns
+)
+save_results(results_multi, f"{FSELECTION_PATH}multi_kbest_{name}_results.csv", columns)
 
 # Apply RFE
 results_binary = []
