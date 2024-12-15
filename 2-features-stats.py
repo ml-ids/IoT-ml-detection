@@ -29,12 +29,6 @@ args = parser.parse_args()
 
 df = pd.read_pickle(args.data_set)
 
-columns_to_drop = ['type', 'dst_ip_bytes', 'missed_bytes', 'duration', 'dst_pkts', 
-                   'dns_RA', 'dns_AA', 'dns_RD', 'ssl_subject', 'ssl_issuer', 'ssl_version',
-                   'ssl_cipher', 'ssl_resumed', 'ssl_established', 'http_trans_depth', 'http_method',
-                   'http_version', 'http_user_agent', 'http_orig_mime_types', 'http_resp_mime_types',
-                   'weird_name', 'weird_addl', 'weird_notice']
-
 #data_cleaned = df.drop(columns=columns_to_drop, axis=1)
 
 categorical_columns = df.select_dtypes(include=['object']).columns
@@ -104,7 +98,7 @@ else:
     plt.savefig("graphics/feature-sorted.png")
 
 
-f2f = df.drop(columns=bool_columns)
+f2f = df.drop(columns=bool_columns).drop(columns=["type"])
 
 correlation_matrix = f2f.corr(method='spearman')
 plt.figure(figsize=(20, 20))
