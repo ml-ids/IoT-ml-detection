@@ -79,13 +79,13 @@ def getVariances(threshold, data):
     return variances_df, features_high_variance, features_low_variance
 
 
-def getKBest(k, data, target, targetName):
+def getKBest(k, data, target):
     # selection
     selector = SelectKBest(score_func=mutual_info_classif, k=k)
-    x_kbest = selector.fit_transform(data.drop(columns=targetName), target)
+    x_kbest = selector.fit_transform(data, target)
 
     # Create a DataFrame with the selected features
-    kbest_features = data.drop(columns=targetName).columns[selector.get_support()]
+    kbest_features = data.columns[selector.get_support()]
     x_kbest_df = pd.DataFrame(x_kbest, columns=kbest_features)
 
     return x_kbest_df
@@ -97,7 +97,7 @@ def process_kbest(data, target, target_name, k, file_path):
         print(f"# {file_path} already exists. Skipping KBest computation for k={k}.")
     except FileNotFoundError:
         print(f"# Applying KBest for {target_name} target with k={k}...")
-        x_kbest_df = getKBest(k, data, target, target_name)
+        x_kbest_df = getKBest(k, data, target)
         x_kbest_df[target_name] = target.values
         x_kbest_df.to_csv(file_path, index=False)
     x_kbest_df = x_kbest_df.drop(columns=[target_name], axis=1)
@@ -118,13 +118,13 @@ def save_results(results, file_path, columns):
     results_df.to_csv(file_path, index=False)
 
 
-def getRFE(k, data, target, targetName):
+def getRFE(k, data, target):
     # selection
-    selector = RFE(estimator=RandomForestClassifier(), n_features_to_select=k)
-    x_rfe = selector.fit_transform(data.drop(columns=targetName), target)
+    selector = RFE(estimator=model, n_features_to_select=k)
+    x_rfe = selector.fit_transform(data, target)
 
     # Create a DataFrame with the selected features
-    rfe_features = data.drop(columns=targetName).columns[selector.get_support()]
+    rfe_features = data.columns[selector.get_support()]
     x_rfe_df = pd.DataFrame(x_rfe, columns=rfe_features)
 
     return x_rfe_df
@@ -136,7 +136,7 @@ def process_rfe(data, target, target_name, k, file_path):
         print(f"# {file_path} already exists. Skipping RFE computation for k={k}.")
     except FileNotFoundError:
         print(f"# Applying RFE for {target_name} target with k={k}...")
-        x_rfe_df = getRFE(k, data, target, target_name)
+        x_rfe_df = getRFE(k, data, target)
         x_rfe_df[target_name] = target.values
         x_rfe_df.to_csv(file_path, index=False)
     x_rfe_df = x_rfe_df.drop(columns=[target_name], axis=1)
@@ -152,11 +152,10 @@ def process_rfe(data, target, target_name, k, file_path):
     return (k, accuracy, precision, recall, f1, rfe_features_names)
 
 
-def apply_boruta(data_noLabel, target, target_name):
+def apply_boruta(data_noLabel, target):
     x_train, x_test, y_train, y_test = train_test_split(
         data_noLabel, target, test_size=TEST_SIZE, random_state=RANDOM_STATE
     )
-    print(f"# Applying Boruta for {target_name} classification...")
     boruta = BorutaPy(
         model,
         n_estimators="auto",
@@ -204,20 +203,8 @@ y_type = data["type"]
 counts = y_type.value_counts()
 print(counts.to_string())
 
-# Plot class distribution
-# plt.figure(figsize=(10, 6))
-# ax = sns.countplot(x='label', data=data)
-# plt.title('Class Distribution')
-# plt.xlabel('Class')
-# plt.ylabel('Count')
-# for p in ax.patches:
-#     ax.annotate(f'{int(p.get_height())}', (p.get_x() + p.get_width() / 2., p.get_height()),
-#                 ha='center', va='baseline', fontsize=12, color='black', xytext=(0, 5),
-#                 textcoords='offset points')
-# plt.show()
-
 # Fill missing values
-# print("# Filling missing values...")
+print("# Filling missing values...")
 data = fillMissingValues(data)
 print("# Filled missing values in the train dataset.")
 
@@ -227,8 +214,8 @@ data_prep = scaleEncode(data)
 data_binary = data_prep.drop(columns=["type"], axis=1)
 data_multi = data_prep.drop(columns=["label"], axis=1)
 data_noLabel = data_prep.drop(columns=["label", "type"], axis=1)
-y_binary = data["label"]
-y_multi = data["type"]
+y_binary = data_prep["label"]
+y_multi = data_prep["type"]
 
 # Apply VarianceThreshold
 print("# Applying VarianceThreshold...")
@@ -247,10 +234,10 @@ for k in range(1, data_noLabel.shape[1] + 1):
     binary_file_path = f"{FSELECTION_PATH}binary_{k}best_features.csv"
     multi_file_path = f"{FSELECTION_PATH}multi_{k}best_features.csv"
     results_binary.append(
-        (name,) + process_kbest(data_binary, y_binary, "label", k, binary_file_path)
+        (name,) + process_kbest(data_noLabel, y_binary, "label", k, binary_file_path)
     )
     results_multi.append(
-        (name,) + process_kbest(data_multi, y_multi, "type", k, multi_file_path)
+        (name,) + process_kbest(data_noLabel, y_multi, "type", k, multi_file_path)
     )
 save_results(
     results_binary, f"{FSELECTION_PATH}binary_kbest_{name}_results.csv", columns
@@ -265,25 +252,27 @@ for k in range(1, data_noLabel.shape[1] + 1):
     binary_file_path = f"{FSELECTION_PATH}binary_{k}rfe_features.csv"
     multi_file_path = f"{FSELECTION_PATH}multi_{k}rfe_features.csv"
     results_binary.append(
-        (name,) + process_rfe(data_binary, y_binary, "label", k, binary_file_path)
+        (name,) + process_rfe(data_noLabel, y_binary, "label", k, binary_file_path)
     )
     results_multi.append(
-        (name,) + process_rfe(data_multi, y_multi, "type", k, multi_file_path)
+        (name,) + process_rfe(data_noLabel, y_multi, "type", k, multi_file_path)
     )
 save_results(results_binary, f"{FSELECTION_PATH}binary_rfe_{name}_results.csv", columns)
 save_results(results_multi, f"{FSELECTION_PATH}multi_rfe_{name}_results.csv", columns)
 
 # Apply Boruta
 columns = ["Model", "Accuracy", "Precision", "Recall", "F1-Score", "Features"]
+print(f"# Applying Boruta for label classification...")
 accuracy, precision, recall, f1, selected_features = apply_boruta(
-    data_noLabel, y_binary, "label"
+    data_noLabel, y_binary
 )
 save_results(
     [(name, accuracy, precision, recall, f1, selected_features)],
     f"{FSELECTION_PATH}binary_boruta_{name}_results.csv",
     columns,
 )
-accuracy, precision, recall, f1, selected_features = apply_boruta(data_noLabel, y_multi, "type")
+print(f"# Applying Boruta for type classification...")
+accuracy, precision, recall, f1, selected_features = apply_boruta(data_noLabel, y_multi)
 save_results(
     [(name, accuracy, precision, recall, f1, selected_features)],
     f"{FSELECTION_PATH}multi_boruta_{name}_results.csv",
