@@ -1,4 +1,5 @@
 import os
+import time
 import pandas as pd
 import joblib
 from sklearn.ensemble import RandomForestClassifier
@@ -24,7 +25,8 @@ dataset = f"{DATASET_PATH}Ton_IoT_train_test_network.csv"
 #fselection_binary = f"{FSELECTION_PATH}binary_5best_features.csv"
 #fselection_multi = f"{FSELECTION_PATH}multi_5best_features.csv"
 all_results= []
-
+train_timings=[]
+test_timings=[]
 
 ## utils.py should be changed to this
 models = [
@@ -42,8 +44,6 @@ def save_model(filename, model, name, file_path):
     joblib.dump(model, model_filename)
     print(f"Model saved at {model_filename} at {file_path}")
 
-
-## cannot remove scale and encode because time constraints x)
 def scale(x):
     print("# Scaling numerical features...")
     numerical_features = int_features + float_features
@@ -100,9 +100,6 @@ def calculate_metrics(featurefilename, y_test, y_pred, model_name):
     }
 
     all_results.append(output)
-    ##filename = f"{MODELS_COMPARISON_PATH}{featurefilename}_{model_name}_results.csv"
-    ##dfresult = pd.DataFrame([output])
-    ##dfresult.to_csv(filename, index=False)
     
 
     print(f"Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1:.4f}")
@@ -132,7 +129,6 @@ def export_results():
 def load_features(feature_list):
     # the first row of the csv
     df = pd.read_csv(feature_list, nrows=1)
-    #columns = df.columns.tolist()
     columns = df.columns.drop(['label', 'type'], errors='ignore').tolist()
  
     print("features:", columns)
@@ -179,8 +175,6 @@ def apply_preprocessing():
     # Scale and encode features
     data_prep = scaleEncode(data)
     # Split the data into features and target variables
-    ###data_binary = data_prep.drop(columns=["type"], axis=1)
-    ###data_multi = data_prep.drop(columns=["label"], axis=1)
     x_data_noLabel = data_prep.drop(columns=["label", "type"], axis=1)
     y_binary = data_prep["label"]
     y_multi = data_prep["type"]
@@ -210,72 +204,36 @@ def apply_preprocessing():
     return x_train, x_test, y_binary_train, y_multi_train, y_binary_test, y_multi_test
 
 
-## useless junk which works but w/e
-# def apply_randomforest(x_train, x_test, y_train, y_test):
-#     rf = RandomForestClassifier(n_estimators=100, random_state=RANDOM_STATE)
-    
-
-#     rf.fit(x_train, y_train)
-#     y_pred = rf.predict(x_test)
-    
-#     acc = accuracy_score(y_test, y_pred)  # remember to fix later
-#     print(f"Random Forest Accuracy: {acc:.4f}")
-    
-#     # Save the model
-#     save_model(rf, "random_forest", FSELECTION_PATH)
-#     return y_pred
-
-
-## replaced version of apply_models
-# def OLD_apply_models(x_binary_train, x_multi_train, x_binary_test, x_multi_test, y_binary_train, y_multi_train, y_binary_test, y_multi_test ):
-
-#     for model_name, model in models:
-
-#         #binary
-#         print("\n\n")
-#         print(f"training {model_name}.. binary")
-#         mode=("binary")
-#         model.fit(x_binary_train, y_binary_train)
-#         y_pred = model.predict(x_binary_test)
-#         metrics = calculate_metrics(mode, y_binary_test, y_pred, model_name)
-#         print(f"rq{model_name}, {metrics}") ## sanity check
-#         save_model(mode, model, model_name, MODELS_COMPARISON_PATH)
-#         print("\n\n")
-#         #multi
-#         print(f"training {model_name}.. multi")
-#         mode=("multi")
-#         model.fit(x_multi_train, y_multi_train)
-#         y_pred = model.predict(x_multi_test)
-#         metrics = calculate_metrics(mode, y_multi_test, y_pred, model_name)
-#         print(f"rq{model_name}, {metrics}") ## sanity check
-#         save_model(mode, model, model_name, MODELS_COMPARISON_PATH)
-#         print("\n\n")
-
-#     print("cooked")
-
-
-
 def apply_models(mode, x_train, x_test, y_train, y_test):
     
     for model_name, model in models:
         print("\n\n")
         print(f"training {model_name}.. {mode}")
 
+        train_startTime = time.time()
         model.fit(x_train, y_train)
+        train_endTime = time.time()
+        train_timings.append((mode, model_name, train_endTime - train_startTime))
+
+
+
+
+        test_startTime = time.time()
         y_pred = model.predict(x_test)
+        test_endTime = time.time()
+        test_timings.append((mode, model_name, test_endTime - test_startTime))
+
+
         metrics = calculate_metrics(mode, y_test, y_pred, model_name)
         print(f"rq{model_name}, {metrics}") ## sanity check
         save_model(mode, model, model_name, MODELS_COMPARISON_PATH)
     print("FIN\n\n")
 
 
-# oh god...
 def apply_selectedfeatures():
     all_feature_files = os.listdir(FSELECTION_PATH)
     x_train, x_test, y_binary_train, y_multi_train, y_binary_test, y_multi_test = apply_preprocessing()
 
-    ###x_train, x_test, y_train, y_test = apply_preprocessing1()
-    ## rip pc...
     for file in all_feature_files:
 
         filename = os.path.splitext(file)[0]
@@ -288,9 +246,6 @@ def apply_selectedfeatures():
             x_multi_train = x_train[features]
             x_multi_test = x_test[features]
 
-            #apply_models2(filename, x_train, x_test, y_train, y_test)
-
-            #this can simplifies but im too tired
             if file.startswith('binary_'):
                 apply_models(filename, x_binary_train, x_binary_test, y_binary_train, y_binary_test)
             elif file.startswith('multi_'):
@@ -303,32 +258,12 @@ def apply_selectedfeatures():
     print("all flies completed")
 
 
+def saveTime(name):
+    timings_df = pd.DataFrame(train_timings, columns=["File","Method", "Time"])
+    timings_df.to_csv(f"{MODELS_COMPARISON_PATH}traintimings_{name}.csv", index=False)
 
-
-
-
-
-# binary_features = load_features(fselection_binary)
-# multi_features = load_features(fselection_multi)
-
-# x_train, x_test, y_binary_train, y_multi_train, y_binary_test, y_multi_test = apply_preprocessing()
-
-
-# print(x_train.head())
-
-# print(binary_features)
-# print("\n\n")
-# print(multi_features)
-
-# x_binary_train = x_train[binary_features]
-# x_binary_test = x_test[binary_features]
-
-# x_multi_train = x_train[multi_features]
-# x_multi_test = x_test[multi_features]
-
-
-# ## our chad features
-# OLD_apply_models(x_binary_train, x_multi_train, x_binary_test, x_multi_test, y_binary_train, y_multi_train, y_binary_test, y_multi_test)
+    timings_df = pd.DataFrame(test_timings, columns=["File","Method", "Time"])
+    timings_df.to_csv(f"{MODELS_COMPARISON_PATH}testtimings_{name}.csv", index=False)
 
 
 def main():
@@ -336,6 +271,7 @@ def main():
     apply_selectedfeatures()
     print("done saved...")
     export_results()
+    saveTime("timecollection")
     print("# finalfinal")
 
 if __name__ == "__main__":
