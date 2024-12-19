@@ -237,23 +237,27 @@ def apply_selectedfeatures():
     for file in all_feature_files:
 
         filename = os.path.splitext(file)[0]
-        if file.endswith('.csv'):
-            file_path = os.path.join(FSELECTION_PATH, file)
-            print(f"Processing file: {file_path}")
-            features = load_features(file_path)
-            x_binary_train = x_train[features]
-            x_binary_test = x_test[features]
-            x_multi_train = x_train[features]
-            x_multi_test = x_test[features]
 
-            if file.startswith('binary_'):
-                apply_models(filename, x_binary_train, x_binary_test, y_binary_train, y_binary_test)
-            elif file.startswith('multi_'):
-                apply_models(filename, x_multi_train, x_multi_test, y_multi_train, y_multi_test)
-            else:
-                print("error with file format.")  #x)
+        if not file.endswith('_features.csv'):
+            continue  # Skip files that are not CSV files
+        
+        #file.endswith('_features.csv')
+        file_path = os.path.join(FSELECTION_PATH, file)
+        print(f"Processing file: {file_path}")
+        features = load_features(file_path)
+        x_binary_train = x_train[features]
+        x_binary_test = x_test[features]
+        x_multi_train = x_train[features]
+        x_multi_test = x_test[features]
 
-            print("next file..")
+        if file.startswith('binary_'):
+            apply_models(filename, x_binary_train, x_binary_test, y_binary_train, y_binary_test)
+        elif file.startswith('multi_'):
+            apply_models(filename, x_multi_train, x_multi_test, y_multi_train, y_multi_test)
+        else:
+            print("error with file format.")  #x)
+
+        print("next file..")
 
     print("all flies completed")
 
