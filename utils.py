@@ -10,6 +10,9 @@ FSELECTION_PATH = "data/fSelection/"
 MODELS_COMPARISON_PATH = "data/modelsComparison/"
 MLP_MAX_ITER = 500
 PR_MAX_ITER = 300
+LR_MAX_ITER = 5000  #idk
+SVC_MAX_ITER = 1000 ## what do be good values...
+KNN_K = 5
 RANDOM_STATE = 42
 TEST_SIZE = 0.3
 
