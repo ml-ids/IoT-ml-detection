@@ -1,3 +1,4 @@
+import time
 import pandas as pd
 from sklearn.calibration import LabelEncoder
 from sklearn.discriminant_analysis import StandardScaler
@@ -13,35 +14,24 @@ from boruta import BorutaPy
 from utils import *
 
 name, model = models[0]
+timings = []
 
 
 def scale(x):
     print("# Scaling numerical features...")
     numerical_features = int_features + float_features
     scaler = StandardScaler()
-    x_numerical_scaled = scaler.fit_transform(x[numerical_features])
-    numerical_df = pd.DataFrame(x_numerical_scaled, columns=numerical_features)
-    return pd.concat([numerical_df, data.drop(columns=numerical_features)], axis=1)
+    x[numerical_features] = scaler.fit_transform(x[numerical_features])
+    return x
 
 
 def encode(x):
     print("# Encoding categorical features...")
     categorical_features = string_features + boolean_features
-    label_encoded_dfs = []
     for col in categorical_features:
         encoder = LabelEncoder()
         x[col] = encoder.fit_transform(x[col])
-        label_encoded_dfs.append(x[col])
-    label_encoded_df = pd.concat(label_encoded_dfs, axis=1)
-    return pd.concat(
-        [label_encoded_df, data.drop(columns=categorical_features)], axis=1
-    )
-
-
-def scaleEncode(x):
-    scaled_df = scale(x)
-    scaledEncoded_df = encode(scaled_df)
-    return scaledEncoded_df
+    return x
 
 
 def fillMissingValues(data):
@@ -81,8 +71,11 @@ def getVariances(threshold, data):
 
 def getKBest(k, data, target):
     # selection
+    startTime = time.time()
     selector = SelectKBest(score_func=mutual_info_classif, k=k)
     x_kbest = selector.fit_transform(data, target)
+    endTime = time.time()
+    timings.append((f"KBest{target.name}_{k}", endTime - startTime))
 
     # Create a DataFrame with the selected features
     kbest_features = data.columns[selector.get_support()]
@@ -91,21 +84,24 @@ def getKBest(k, data, target):
     return x_kbest_df
 
 
-def process_kbest(data, target, target_name, k, file_path):
+def process_kbest(data, target, k, file_path):
     try:
         x_kbest_df = pd.read_csv(file_path)
         print(f"# {file_path} already exists. Skipping KBest computation for k={k}.")
     except FileNotFoundError:
-        print(f"# Applying KBest for {target_name} target with k={k}...")
+        print(f"# Applying KBest for {target.name} target with k={k}...")
         x_kbest_df = getKBest(k, data, target)
-        x_kbest_df[target_name] = target.values
+        x_kbest_df[target.name] = target.values
         x_kbest_df.to_csv(file_path, index=False)
-    x_kbest_df = x_kbest_df.drop(columns=[target_name], axis=1)
+    x_kbest_df = x_kbest_df.drop(columns=[target.name], axis=1)
     x_train, x_test, y_train, y_test = train_test_split(
         x_kbest_df, target, test_size=TEST_SIZE, random_state=RANDOM_STATE
     )
     print(f"# Training...")
+    startTime = time.time()
     model.fit(x_train, y_train)
+    endTime = time.time()
+    timings.append((f"KBestTraining{target.name}_{k}", endTime - startTime))
     print(f"# Predicting...")
     y_pred = model.predict(x_test)
     accuracy, precision, recall, f1 = calculate_metrics(y_test, y_pred)
@@ -120,8 +116,11 @@ def save_results(results, file_path, columns):
 
 def getRFE(k, data, target):
     # selection
+    startTime = time.time()
     selector = RFE(estimator=model, n_features_to_select=k)
     x_rfe = selector.fit_transform(data, target)
+    endTime = time.time()
+    timings.append((f"RFE{target.name}_{k}", endTime - startTime))
 
     # Create a DataFrame with the selected features
     rfe_features = data.columns[selector.get_support()]
@@ -130,21 +129,24 @@ def getRFE(k, data, target):
     return x_rfe_df
 
 
-def process_rfe(data, target, target_name, k, file_path):
+def process_rfe(data, target, k, file_path):
     try:
         x_rfe_df = pd.read_csv(file_path)
         print(f"# {file_path} already exists. Skipping RFE computation for k={k}.")
     except FileNotFoundError:
-        print(f"# Applying RFE for {target_name} target with k={k}...")
+        print(f"# Applying RFE for {target.name} target with k={k}...")
         x_rfe_df = getRFE(k, data, target)
-        x_rfe_df[target_name] = target.values
+        x_rfe_df[target.name] = target.values
         x_rfe_df.to_csv(file_path, index=False)
-    x_rfe_df = x_rfe_df.drop(columns=[target_name], axis=1)
+    x_rfe_df = x_rfe_df.drop(columns=[target.name], axis=1)
     x_train, x_test, y_train, y_test = train_test_split(
         x_rfe_df, target, test_size=TEST_SIZE, random_state=RANDOM_STATE
     )
     print(f"# Training...")
+    startTime = time.time()
     model.fit(x_train, y_train)
+    endTime = time.time()
+    timings.append((f"RFETraining{target.name}_{k}", endTime - startTime))
     print(f"# Predicting...")
     y_pred = model.predict(x_test)
     accuracy, precision, recall, f1 = calculate_metrics(y_test, y_pred)
@@ -156,6 +158,7 @@ def apply_boruta(data_noLabel, target):
     x_train, x_test, y_train, y_test = train_test_split(
         data_noLabel, target, test_size=TEST_SIZE, random_state=RANDOM_STATE
     )
+    startTime = time.time()
     boruta = BorutaPy(
         model,
         n_estimators="auto",
@@ -165,7 +168,12 @@ def apply_boruta(data_noLabel, target):
     boruta.fit(x_train.values, y_train.values)
     sel_x_train = boruta.transform(x_train.values)
     sel_x_test = boruta.transform(x_test.values)
+    endTime = time.time()
+    timings.append((f"Boruta{target.name}", endTime - startTime))
+    startTime = time.time()
     model.fit(sel_x_train, y_train)
+    endTime = time.time()
+    timings.append((f"BorutaTraining{target.name}", endTime - startTime))
     y_pred = model.predict(sel_x_test)
     accuracy, precision, recall, f1 = calculate_metrics(y_test, y_pred)
     selected_features_mask = boruta.support_
@@ -209,7 +217,8 @@ data = fillMissingValues(data)
 print("# Filled missing values in the train dataset.")
 
 # Scale and encode features
-data_prep = scaleEncode(data)
+data_scaled = scale(data)
+data_prep = encode(data_scaled)
 # Split the data into features and target variables
 data_binary = data_prep.drop(columns=["type"], axis=1)
 data_multi = data_prep.drop(columns=["label"], axis=1)
@@ -219,9 +228,12 @@ y_multi = data_prep["type"]
 
 # Apply VarianceThreshold
 print("# Applying VarianceThreshold...")
+startTime = time.time()
 variances_df, features_high_variance, features_low_variance = getVariances(
     0.3, data_noLabel
 )
+endTime = time.time()
+timings.append(("VarianceThreshold", endTime - startTime))
 variances_df.to_csv(f"{FSELECTION_PATH}features_variance.csv")
 features_high_variance.to_csv(f"{FSELECTION_PATH}features_high_variance.csv")
 features_low_variance.to_csv(f"{FSELECTION_PATH}features_low_variance.csv")
@@ -233,12 +245,10 @@ columns = ["Model", "K", "Accuracy", "Precision", "Recall", "F1-Score", "Feature
 for k in range(1, data_noLabel.shape[1] + 1):
     binary_file_path = f"{FSELECTION_PATH}binary_{k}best_features.csv"
     multi_file_path = f"{FSELECTION_PATH}multi_{k}best_features.csv"
-    results_binary.append(
-        (name,) + process_kbest(data_noLabel, y_binary, "label", k, binary_file_path)
-    )
-    results_multi.append(
-        (name,) + process_kbest(data_noLabel, y_multi, "type", k, multi_file_path)
-    )
+    kbestBinaryResult = process_kbest(data_noLabel, y_binary, k, binary_file_path)
+    kbestMultiResult = process_kbest(data_noLabel, y_multi, k, multi_file_path)
+    results_binary.append((name,) + kbestBinaryResult)
+    results_multi.append((name,) + kbestMultiResult)
 save_results(
     results_binary, f"{FSELECTION_PATH}binary_kbest_{name}_results.csv", columns
 )
@@ -251,12 +261,10 @@ columns = ["Model", "K", "Accuracy", "Precision", "Recall", "F1-Score", "Feature
 for k in range(1, data_noLabel.shape[1] + 1):
     binary_file_path = f"{FSELECTION_PATH}binary_{k}rfe_features.csv"
     multi_file_path = f"{FSELECTION_PATH}multi_{k}rfe_features.csv"
-    results_binary.append(
-        (name,) + process_rfe(data_noLabel, y_binary, "label", k, binary_file_path)
-    )
-    results_multi.append(
-        (name,) + process_rfe(data_noLabel, y_multi, "type", k, multi_file_path)
-    )
+    rfeBinaryResult = process_rfe(data_noLabel, y_binary, k, binary_file_path)
+    rfeMultiResult = process_rfe(data_noLabel, y_multi, k, multi_file_path)
+    results_binary.append((name,) + rfeBinaryResult)
+    results_multi.append((name,) + rfeMultiResult)
 save_results(results_binary, f"{FSELECTION_PATH}binary_rfe_{name}_results.csv", columns)
 save_results(results_multi, f"{FSELECTION_PATH}multi_rfe_{name}_results.csv", columns)
 
@@ -278,6 +286,10 @@ save_results(
     f"{FSELECTION_PATH}multi_boruta_{name}_results.csv",
     columns,
 )
+
+# Save timings
+timings_df = pd.DataFrame(timings, columns=["Method", "Time"])
+timings_df.to_csv(f"{FSELECTION_PATH}timings_{name}.csv", index=False)
 
 print(f"# Results in {FSELECTION_PATH}")
 
